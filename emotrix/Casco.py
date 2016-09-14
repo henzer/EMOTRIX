@@ -1,11 +1,13 @@
 import serial
 import time
+from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from ReadingThread import ReadingThread
 
 class Casco(InputDeviceInterface):
 
     device_handler = None
+    db = None
     port = None
     baudrate = 0
     is_connected = False
@@ -74,3 +76,12 @@ class Casco(InputDeviceInterface):
         # Wait for a moment so that the thread ends.
         time.sleep(0.1)
         self.is_reading = False
+
+    def startDatabase(self):
+        client = MongoClient()
+        self.db = client.emotrix
+        print client.database_names()
+        print self.db.collection_names()
+
+    def getDatabase(self):
+        return self.db
