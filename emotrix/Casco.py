@@ -10,7 +10,6 @@ class Casco(InputDeviceInterface):
     db = None
     port = None
     baudrate = 0
-    is_connected = False
     is_reading = False
     reading_thread = None
 
@@ -18,14 +17,13 @@ class Casco(InputDeviceInterface):
         try:
             self.device_handler = serial.Serial(port, baudrate, timeout=1)
 
-            self.is_connected = True
             self.port = port
             self.baudrate = baudrate
         except Exception, e:
             raise e
 
     def isConnected(self):
-        return self.is_connected
+        return self.device_handler.isOpen()
 
     def getStatus(self):
         pass
@@ -44,7 +42,6 @@ class Casco(InputDeviceInterface):
         print "Closing port " + str(self.port) + "..."
 
         self.device_handler.close()
-        self.is_connected = False
 
         print "Port " + str(self.port) + " closed successfully!"
         return True
@@ -80,8 +77,8 @@ class Casco(InputDeviceInterface):
     def startDatabase(self):
         client = MongoClient()
         self.db = client.emotrix
-        print client.database_names()
-        print self.db.collection_names()
+        # print client.database_names()
+        # print self.db.collection_names()
 
     def getDatabase(self):
         return self.db

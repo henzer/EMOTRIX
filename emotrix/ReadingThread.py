@@ -22,7 +22,6 @@ class ReadingThread(threading.Thread):
                 print "Reading procces raise an exception:"
                 print str(e)
                 self.stop_reading = True
-                return
 
         print "Exiting reading thread " + str(self.threadID)
 
