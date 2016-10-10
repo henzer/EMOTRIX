@@ -2,6 +2,7 @@ from Casco import Casco
 import sys
 import time
 import json
+import datetime
 
 """
 casco = Casco()
@@ -29,9 +30,10 @@ print casco.isConnected()
 data = '{'
 data += '   "data": {"s1":65,"s2":63,"s3":60,"s4":77},'
 data += '   "status": {"s1":1,"s2":1,"s3":2,"s4":3},'
-data += '   "checksum": 4526,'
-data += '   "readed_at": "2015-12-01"'
+data += '   "checksum": 4526'
 data += '}'
 
 dataJson = json.loads(data)
+dataJson['readed_at'] = datetime.datetime.now()
+
 print dataJson
