@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import serial
-import time
+import logging
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from ReadingThread import ReadingThread
@@ -12,16 +14,20 @@ class Casco(InputDeviceInterface):
     baudrate = 0
     is_reading = False
     reading_thread = None
+    logger = None
+
+    def __init__(self):
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        # Can rainse an pymongo.errors.ServerSelectionTimeoutError
+        self.__startDatabase()
 
     def connect(self, port, baudrate):
         try:
             self.device_handler = serial.Serial(port, baudrate, timeout=1)
             self.port = port
             self.baudrate = baudrate
-
-            self.__startDatabase()
-            # Wait for a moment so that the thread ends.
-            time.sleep(0.1)
         except Exception, e:
             raise e
 
@@ -34,19 +40,18 @@ class Casco(InputDeviceInterface):
     def closePort(self):
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
-            print "Device is not conected!"
+            self.logger.info("Device is not conected!")
             return False
 
         # Si todavia esta leyendo, no puede cerrar.
         if (self.is_reading):
-            print "Can't close port because is still reading!"
+            self.logger.info("Can't close port because is still reading!")
             return False
 
-        print "Closing port " + str(self.port) + "..."
-
+        self.logger.info("Closing port " + str(self.port) + "...")
         self.device_handler.close()
+        self.logger.info("Port " + str(self.port) + " closed successfully!")
 
-        print "Port " + str(self.port) + " closed successfully!"
         return True
 
     def setPort(self, port):
@@ -68,24 +73,29 @@ class Casco(InputDeviceInterface):
         if (not self.db):
             raise Exception("Mongo db not initialized!")
 
-        print "Start reading"
         self.reading_thread = ReadingThread(self.device_handler, self.db)
         self.reading_thread.start()
         self.is_reading = True
 
     def stopReading(self):
         self.reading_thread.stopReading()
-        # Wait for a moment so that the thread ends.
-        time.sleep(0.1)
+        self.reading_thread.join()
         self.is_reading = False
 
     def __startDatabase(self):
-        print "Starting database"
-        client = MongoClient()
-        self.db = client.emotrix_db
-        # print self.db.emotrix_db.find()
-        # print client.database_names()
-        # print self.db.collection_names()
+        self.logger.info("Starting mongo client...")
+
+        try:
+            client = MongoClient("localhost", serverSelectionTimeoutMS=1)
+            # Force connection on this request. This will raise an
+            # exception if can't establish connection with server.
+            client.server_info()
+
+            self.db = client.emotrix_db
+        except Exception, e:
+            raise Exception("Unable to connect to MongoDB server. \n" + str(e))
+
+        self.logger.info("MongoDB server connection established.")
 
     def __getDatabase(self):
         return self.db

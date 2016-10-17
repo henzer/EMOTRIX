@@ -37,7 +37,7 @@ class ReadingThread(threading.Thread):
                 data = self.input_handler.readline()
                 print data
             except Exception, e:
-                raise Exception("Reading procces raise an exception:\n" + str(e))
+                raise Exception("Reading procces raise an exception.\n" + str(e))
 
             # Si no se leyó nada, continuar.
             if (not data):
@@ -54,7 +54,7 @@ class ReadingThread(threading.Thread):
                 dataJson['readed_at'] = datetime.datetime.now()
                 self.db.helmet_data.insert_one(dataJson)
             except Exception, e:
-                raise Exception("Persisting helmet data raise an exception:\n" + str(e))
+                raise Exception("Persisting helmet data raise an exception.\n" + str(e))
             
             
 
