@@ -19,7 +19,9 @@ class Casco(InputDeviceInterface):
             self.port = port
             self.baudrate = baudrate
 
-            self.startDatabase()
+            self.__startDatabase()
+            # Wait for a moment so that the thread ends.
+            time.sleep(0.1)
         except Exception, e:
             raise e
 
@@ -61,15 +63,13 @@ class Casco(InputDeviceInterface):
 
     def startReading(self):
         if (not self.isConnected()):
-            print "Device is not conected!"
-            return None
+            raise Exception("Device is not conected!")
 
         if (not self.db):
-            print "Mongo db not initialized!"
-            return None            
+            raise Exception("Mongo db not initialized!")
 
         print "Start reading"
-        self.reading_thread = ReadingThread(1, self.device_handler)
+        self.reading_thread = ReadingThread(self.device_handler, self.db)
         self.reading_thread.start()
         self.is_reading = True
 
@@ -80,8 +80,10 @@ class Casco(InputDeviceInterface):
         self.is_reading = False
 
     def __startDatabase(self):
+        print "Starting database"
         client = MongoClient()
-        self.db = client.emotrix
+        self.db = client.emotrix_db
+        # print self.db.emotrix_db.find()
         # print client.database_names()
         # print self.db.collection_names()
 

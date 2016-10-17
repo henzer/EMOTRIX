@@ -1,26 +1,35 @@
+# -*- coding: utf-8 -*-
+
 import threading
+import logging
+import json
+import datetime
 
 class ReadingThread(threading.Thread):
     input_handler = None
     stop_reading = False
     db = None
+    logger = None
 
-    def __init__(self, threadID, input_handler, db):
+    def __init__(self, input_handler, db):
         threading.Thread.__init__(self)
-        self.threadID = threadID
+
+        self.setName("Helmet data reader")
         self.input_handler = input_handler
+        self.db = db
+
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
     # TODO: Test persisting process
     def run(self):
         if (not self.input_handler):
-            print "Input handler not defined!"
-            return
+            raise Exception("Input handler not defined!")
 
         if (not self.db):
-            print "Mongo db not defined!"
-            return
+            raise Exception("Mongo db not defined!")
 
-        print "Starting reading thread " + str(self.threadID)
+        self.logger.info("Starting thread: " + self.getName())
         while not self.stop_reading:
             data = ""
 
@@ -28,29 +37,28 @@ class ReadingThread(threading.Thread):
                 data = self.input_handler.readline()
                 print data
             except Exception, e:
-                print "Reading procces raise an exception:"
-                print str(e)
-                return
+                raise Exception("Reading procces raise an exception:\n" + str(e))
+
+            # Si no se leyó nada, continuar.
+            if (not data):
+                continue
 
             dataJson = []
             try:
                 dataJson = json.loads(data)
             except Exception, e:
-                print "Converting data to JSON format raise an exception:"
-                print str(e)
-                return
+                self.logger.warning("Unable to load data as a json object: {}".format(data))
+                continue
 
             try:
                 dataJson['readed_at'] = datetime.datetime.now()
                 self.db.helmet_data.insert_one(dataJson)
             except Exception, e:
-                print "Persisting helmet data raise an exception:"
-                print str(e)
-                return
+                raise Exception("Persisting helmet data raise an exception:\n" + str(e))
             
             
 
-        print "Exiting reading thread " + str(self.threadID)
+        self.logger.info("Exiting thread: " + self.getName())
 
     def stopReading(self):
         self.stop_reading = True
