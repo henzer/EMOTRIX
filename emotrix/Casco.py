@@ -20,7 +20,7 @@ class Casco(InputDeviceInterface):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        # Can rainse an pymongo.errors.ServerSelectionTimeoutError
+        # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__startDatabase()
 
     def connect(self, port, baudrate):

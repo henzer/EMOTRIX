@@ -21,7 +21,6 @@ class ReadingThread(threading.Thread):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-    # TODO: Test persisting process
     def run(self):
         if (not self.input_handler):
             raise Exception("Input handler not defined!")
@@ -33,23 +32,30 @@ class ReadingThread(threading.Thread):
         while not self.stop_reading:
             data = ""
 
+            # Lectura desde el puerto serial
             try:
                 data = self.input_handler.readline()
-                print data
+                if (not data):
+                    continue
             except Exception, e:
                 raise Exception("Reading procces raise an exception.\n" + str(e))
 
-            # Si no se leyó nada, continuar.
-            if (not data):
-                continue
-
-            dataJson = []
+            # Parseo de la data recibida
             try:
-                dataJson = json.loads(data)
+                data = self.__processData(data)
+                if (not data):
+                    continue
             except Exception, e:
-                self.logger.warning("Unable to load data as a json object: {}".format(data))
+                raise Exception("Parsing procces raise an exception. \n" + str(e))
+
+            # Creación del objeto json con la data
+            try:
+                dataJson = json.loads(json.dumps(data))
+            except Exception, e:
+                self.logger.warning("Unable to load data as a json object.\n" + str(e))
                 continue
 
+            # Persistencia de la data en la BD
             try:
                 dataJson['readed_at'] = datetime.datetime.now()
                 self.db.helmet_data.insert_one(dataJson)
@@ -65,3 +71,32 @@ class ReadingThread(threading.Thread):
 
     def getStopReading(self):
         return self.stop_reading
+
+    def __processData(self, data):
+        data = data.strip()
+        data = data[1:-1]
+
+        processedData = {}
+        cont = 1;
+        go = True
+        while go:
+            try:
+                sX = data[0 : data.index(",\"s{}\":".format(cont))]
+            except Exception, e:
+                sX = data
+                go = False
+
+            sX = sX[5 : len(sX)]
+            if (sX == 'null'):
+                self.logger.warning('Invalid char received: {}'.format(sX))
+            else :
+                char =  sX[1:-1].decode('unicode-escape')
+                if (len(char) == 1):
+                    processedData['s{}'.format(cont)] = ord(char)
+                else:
+                    self.logger.warning('Invalid char received: {}'.format(char))
+
+            if (go):
+                data = data[data.index(",\"s{}\":".format(cont)) + 1 : len(data)]
+                cont += 1
+        return processedData
