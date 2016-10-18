@@ -16,5 +16,13 @@ class InputDeviceInterface:
         pass
 
     @abstractmethod
-    def closePort():
+    def closePort(self):
+        pass
+
+    @abstractmethod
+    def startReading(self):
+        pass
+
+    @abstractmethod
+    def stopReading(self):
         pass

@@ -8,12 +8,12 @@ from ReadingThread import ReadingThread
 
 class Casco(InputDeviceInterface):
 
-    device_handler = None
     db = None
     port = None
     baudrate = 0
     is_reading = False
     reading_thread = None
+    device_handler = None
     logger = None
 
     def __init__(self):
@@ -54,26 +54,14 @@ class Casco(InputDeviceInterface):
 
         return True
 
-    def setPort(self, port):
-        self.port = port
-
-    def getPort(self):
-        return self.port;
-
-    def setBaudRate(self, baudrate):
-        self.baudrate = baudrate
-
-    def getBaudRate(self):
-        return self.baudrate
-
-    def startReading(self):
+    def startReading(self, persist_data = False):
         if (not self.isConnected()):
             raise Exception("Device is not conected!")
 
-        if (not self.db):
+        if (persist_data and not self.db):
             raise Exception("Mongo db not initialized!")
 
-        self.reading_thread = ReadingThread(self.device_handler, self.db)
+        self.reading_thread = ReadingThread(self.device_handler, self.db, persist_data)
         self.reading_thread.start()
         self.is_reading = True
 
@@ -96,6 +84,3 @@ class Casco(InputDeviceInterface):
             raise Exception("Unable to connect to MongoDB server. \n" + str(e))
 
         self.logger.info("MongoDB server connection established.")
-
-    def __getDatabase(self):
-        return self.db

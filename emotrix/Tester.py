@@ -1,8 +1,5 @@
 from Casco import Casco
-import sys
 import time
-import json
-import datetime
 
 puerto = 'COM3'
 casco = Casco()
@@ -16,7 +13,7 @@ except Exception, e:
 
 print "Is conected? " + str(casco.isConnected())
 print "----------------"
-casco.startReading()
+casco.startReading(persist_data = False)
 time.sleep(3)
 casco.stopReading()
 casco.closePort()
