@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 
 import threading
 import logging
@@ -32,7 +32,7 @@ class ReadingThread(threading.Thread):
         while not self.stop_reading:
             data = ""
 
-            # Lectura desde el puerto serial
+            # Reading from serial port
             try:
                 data = self.input_handler.readline()
                 if (not data):
@@ -40,7 +40,7 @@ class ReadingThread(threading.Thread):
             except Exception, e:
                 raise Exception("Reading procces raise an exception.\n" + str(e))
 
-            # Parseo de la data recibida
+            # Data parsing
             try:
                 data = self.__processData(data)
                 if (not data):
@@ -48,21 +48,19 @@ class ReadingThread(threading.Thread):
             except Exception, e:
                 raise Exception("Parsing procces raise an exception. \n" + str(e))
 
-            # Creación del objeto json con la data
+            # Load data in a JSON object
             try:
                 dataJson = json.loads(json.dumps(data))
             except Exception, e:
                 self.logger.warning("Unable to load data as a json object.\n" + str(e))
                 continue
 
-            # Persistencia de la data en la BD
+            # Persisting data on DB
             try:
                 dataJson['readed_at'] = datetime.datetime.now()
                 self.db.helmet_data.insert_one(dataJson)
             except Exception, e:
                 raise Exception("Persisting helmet data raise an exception.\n" + str(e))
-            
-            
 
         self.logger.info("Exiting thread: " + self.getName())
 
@@ -73,30 +71,53 @@ class ReadingThread(threading.Thread):
         return self.stop_reading
 
     def __processData(self, data):
+        """
+        This method parses a sample of helmet data.
+        A valid sample should look like this:
+            {"s1":"KT","s2":"HJ","s3":"LS"}
+        
+        TODO: Change this line
+            char =  sX.decode('unicode-escape')
+        """
+        self.logger.info('Parsing sample: ' + data)
+        # If data were {"s1":"KT","s2":"HJ","s3":"LS"},
+        # comments represent first iteration in while loop.
         data = data.strip()
+
+        # data = "s1":"KT","s2":"HJ","s3":"LS"
         data = data[1:-1]
 
         processedData = {}
-        cont = 1;
+        # Look for s2
+        cont = 2;
         go = True
         while go:
             try:
+                # sX = "s1":"KT"
                 sX = data[0 : data.index(",\"s{}\":".format(cont))]
             except Exception, e:
                 sX = data
                 go = False
 
+            # sX = "KT"
             sX = sX[5 : len(sX)]
             if (sX == 'null'):
-                self.logger.warning('Invalid char received: {}'.format(sX))
+                self.logger.warning('Null char received: {}'.format(sX))
             else :
-                char =  sX[1:-1].decode('unicode-escape')
-                if (len(char) == 1):
-                    processedData['s{}'.format(cont)] = ord(char)
+                # sX = KT
+                sX = sX[1:-1]
+                try:
+                    char =  sX.decode('unicode-escape')
+                except Exception, e:
+                    raise Exception('Unable to decode character ' . sX)
+                if (len(char) == 2):
+                    processedData['s{}'.format(cont - 1)] = {'char1': ord(char[0]), 'char2': ord(char[1])}
                 else:
                     self.logger.warning('Invalid char received: {}'.format(char))
 
             if (go):
+                # data = "s2":"HJ","s3":"LS"
                 data = data[data.index(",\"s{}\":".format(cont)) + 1 : len(data)]
                 cont += 1
+
         return processedData
