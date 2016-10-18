@@ -1,12 +1,12 @@
-
-
 import threading
 import logging
 import json
 import datetime
+import time
 
 class ReadingThread(threading.Thread):
     NUMBER_OF_SENSORS = 4
+    MAX_VALUE = 4095
     input_handler = None
     stop_reading = False
     persist_data = False
@@ -45,26 +45,31 @@ class ReadingThread(threading.Thread):
 
             # Data parsing
             try:
-                data = self.__processData(data)
-                print data
+                data = self.__parseData(data)
                 if (not data):
                     continue
             except Exception, e:
                 raise Exception("Parsing procces raise an exception. \n" + str(e))
 
-            # Load data in a JSON object
-            try:
-                dataJson = json.loads(json.dumps(data))
-            except Exception, e:
-                self.logger.warning("Unable to load data as a json object.\n" + str(e))
+            # Process data
+            checksum = data.pop('checksum')
+            data = self.__processValues(data)
+
+            if (not data):
                 continue
 
             # Persisting data on DB
             if (not self.persist_data):
                 continue
 
+            # Load data into a JSON object
             try:
-                dataJson['readed_at'] = datetime.datetime.now()
+                dataJson = json.loads(json.dumps(data))
+            except Exception, e:
+                self.logger.warning("Unable to load data as a json object.\n" + str(e))
+                continue
+
+            try:
                 self.db.helmet_data.insert_one(dataJson)
             except Exception, e:
                 raise Exception("Persisting helmet data raise an exception.\n" + str(e))
@@ -74,7 +79,7 @@ class ReadingThread(threading.Thread):
     def stopReading(self):
         self.stop_reading = True
 
-    def __processData(self, data):
+    def __parseData(self, data):
         """
         This method parses a sample of helmet data.
         A valid sample should look like this:
@@ -100,7 +105,7 @@ class ReadingThread(threading.Thread):
         try:
             # checksum = ,cs:4253
             checksum = data[data.index(",cs:") : len(data)]
-            checksum = int(checksum[4 : len(checksum)])
+            checksum = checksum[4 : len(checksum)]
         except Exception, e:
             raise Exception('Error while getting checksum value.\n' + str(e))
 
@@ -141,3 +146,33 @@ class ReadingThread(threading.Thread):
         processedData['checksum'] = checksum
 
         return processedData
+
+    def __processValues(self, data):
+        processedValues = {}
+        # Assume that all were taken at the same time.
+        timestamp = str(time.time())
+        for key in data:
+            binVal1 = "{0:b}".format(data[key]['char1'])
+            binVal2 = "{0:b}".format(data[key]['char2'])
+            binVal1 = binVal1.rjust(8, '0')
+            binVal2 = binVal2.rjust(8, '0')
+            realValue = int(binVal1 + binVal2, 2)
+
+            # if (realValue > self.MAX_VALUE):
+            #     self.logger.warning('Too large value received. {}:{}'.format(key, data[key]))
+            #     return {}
+
+            # TODO: Implement process for quality
+            processedValues[key] = {'value': realValue, 'quality': 15, 'readed_at': timestamp}
+
+        return processedValues
+
+    def __assertChecksum(self, data, checksum):
+        suma = 0
+        for key in data:
+            suma += data[key]['char1'] + data[key]['char2']
+
+        if (checksum == suma):
+            return True
+
+        return False
