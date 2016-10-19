@@ -5,6 +5,7 @@ import logging
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from ReadingThread import ReadingThread
+from Buffer import Buffer
 
 class Casco(InputDeviceInterface):
 
@@ -12,13 +13,17 @@ class Casco(InputDeviceInterface):
     port = None
     baudrate = 0
     is_reading = False
-    reading_thread = None
+    device_reader = None
     device_handler = None
+    device_buffer = None
+    BUFFER_SIZE = 100
     logger = None
 
     def __init__(self):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
+
+        self.device_buffer = Buffer(self.BUFFER_SIZE)
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__startDatabase()
@@ -35,39 +40,43 @@ class Casco(InputDeviceInterface):
         return self.device_handler.isOpen()
 
     def getStatus(self):
-        pass
+        currentData = self.device_buffer.getAll()
+        # TODO: get standard deviation
 
     def closePort(self):
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
-            self.logger.info("Device is not conected!")
+            self.logger.info("Device is not conected.")
             return False
 
         # Si todavia esta leyendo, no puede cerrar.
         if (self.is_reading):
-            self.logger.info("Can't close port because is still reading!")
+            self.logger.info("Can't close port because is still reading.")
             return False
 
         self.logger.info("Closing port " + str(self.port) + "...")
         self.device_handler.close()
-        self.logger.info("Port " + str(self.port) + " closed successfully!")
+        self.logger.info("Port " + str(self.port) + " closed successfully.")
 
         return True
 
     def startReading(self, persist_data = False):
         if (not self.isConnected()):
-            raise Exception("Device is not conected!")
+            raise Exception("Device is not conected.")
 
         if (persist_data and not self.db):
-            raise Exception("Mongo db not initialized!")
+            raise Exception("Mongo db not initialized.")
 
-        self.reading_thread = ReadingThread(self.device_handler, self.db, persist_data)
-        self.reading_thread.start()
+        if (not self.device_buffer):
+            raise Exception("Buffer not initialized.")
+
+        self.device_reader = ReadingThread(self.device_handler, self.device_buffer, self.db, persist_data)
+        self.device_reader.start()
         self.is_reading = True
 
     def stopReading(self):
-        self.reading_thread.stopReading()
-        self.reading_thread.join()
+        self.device_reader.stopReading()
+        self.device_reader.join()
         self.is_reading = False
 
     def __startDatabase(self):
