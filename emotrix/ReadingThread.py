@@ -33,22 +33,34 @@ class ReadingThread(threading.Thread):
         if (self.persist_data and not self.db):
             raise Exception("Mongo db not defined!")
 
+        received_count = 0
+        ignored_count = 0
         self.logger.info("Starting thread: " + self.getName())
         while not self.stop_reading:
             # Reading from serial port
             try:
-                data = self.input_handler.readline()
-                if (not data):
-                    continue
+                data = ""
+                # Look for start of a sample
+                while (data != "{s1"):
+                    data += self.input_handler.read(1)
+                    if ((len(data) > 0) and (data[0] != "{")):
+                        data = ""
+
+                # Complete a sample
+                while (len(data) != 31):
+                    data += self.input_handler.read(1)
+
             except Exception, e:
                 raise Exception(
                     "Reading procces raise an exception.\n" + str(e)
                 )
 
+            received_count += 1
             # Data parsing
             try:
                 data = self.__parseAndConvertCharsToInts(data)
                 if (not data):
+                    ignored_count += 1
                     continue
             except Exception, e:
                 raise Exception(
@@ -62,6 +74,7 @@ class ReadingThread(threading.Thread):
             try:
                 data = self.__processValues(data)
                 if (not data):
+                    ignored_count += 1
                     continue
             except Exception, e:
                 raise Exception(
@@ -92,6 +105,12 @@ class ReadingThread(threading.Thread):
                 )
 
         self.logger.info("Exiting thread: " + self.getName())
+        self.logger.info(
+            "Samples received = {}, Samples ignored:{}".format(
+                received_count,
+                ignored_count
+            )
+        )
 
     def stopReading(self):
         self.stop_reading = True
@@ -157,14 +176,14 @@ class ReadingThread(threading.Thread):
             binVal2 = binVal2.rjust(8, '0')
             realValue = int(binVal1 + binVal2, 2)
 
-            # if (realValue > self.MAX_VALUE):
-            #     self.logger.warning(
-            #         'Too large value received. {}:{}'.format(
-            #             key,
-            #             data[key]
-            #         )
-            #     )
-            #     return {}
+            if (realValue > self.MAX_VALUE):
+                self.logger.warning(
+                    'Too large value received. {}:{}'.format(
+                        key,
+                        data[key]
+                    )
+                )
+                return {}
 
             processedValues[key] = {'value': realValue}
 

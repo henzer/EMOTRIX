@@ -6,8 +6,13 @@ from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from ReadingThread import ReadingThread
 from Buffer import Buffer
+from QualityChecker import *
 
 class Casco(InputDeviceInterface):
+
+    NUMBER_OF_SENSORS = 4
+    MAX_DEVIATION_STANDARD = None
+    MIN_DEVIATION_STANDARD = None
 
     db = None
     port = None
@@ -25,6 +30,15 @@ class Casco(InputDeviceInterface):
 
         self.device_buffer = Buffer(self.BUFFER_SIZE)
 
+        deviation_standard_info = get_deviation_standard_range(
+            self.BUFFER_SIZE,
+            1000,
+            0,
+            4096
+        )
+        self.MIN_DEVIATION_STANDARD = deviation_standard_info[0]
+        self.MAX_DEVIATION_STANDARD = deviation_standard_info[1]
+
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__startDatabase()
 
@@ -41,7 +55,23 @@ class Casco(InputDeviceInterface):
 
     def getStatus(self):
         currentData = self.device_buffer.getAll()
-        # TODO: get standard deviation
+        sensorsData = [[] for i in range(self.NUMBER_OF_SENSORS)]
+        for sample in currentData:
+            sample.pop('readed_at')
+            index = 0
+            for sensor in sample:
+                sensorsData[index].append(sample[sensor]["value"])
+                index += 1
+
+        status = {}
+        for i in range(0, self.NUMBER_OF_SENSORS):
+            deviation = standard_deviation(sensorsData[i])
+            if ((deviation < self.MIN_DEVIATION_STANDARD) or (deviation > self.MAX_DEVIATION_STANDARD)):
+                status["s" + str(i + 1)] = "mala"
+            else:
+                status["s" + str(i + 1)] = "buena"
+
+        return status
 
     def closePort(self):
         # Si no esta conectado, no puede cerrar.
