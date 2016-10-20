@@ -1,22 +1,40 @@
 from Headset import Headset
+from Bracelet import Bracelet
 import time
-import sys
 
-puerto = 'COM3'
-casco = Headset()
-print "Conectando a puerto {}.".format(puerto)
+headsetPort = 'COM3'
+braceletPort = 'COM4'
+
+headset = Headset()
+bracelet = Bracelet()
+
 try:
-    casco.connect(puerto, 9600)
+    headset.connect(headsetPort, 9600)
 except Exception, e:
-    print e
-    sys.exit(0)
+    raise e
 
-print "Is conected? " + str(casco.isConnected())
-print "----------------"
-casco.startReading(persist_data=False)
+try:
+    bracelet.connect(braceletPort, 9600)
+except Exception, e:
+    headset.closePort()
+    raise e
+
+print "Headset: Is conected? " + str(headset.isConnected())
+print "Bracelet: Is conected? " + str(bracelet.isConnected())
+print "------------------------------------------------"
+headset.startReading(persist_data=False)
+bracelet.startReading(persist_data=False)
+
 time.sleep(10)
-casco.stopReading()
-casco.closePort()
-print "----------------"
-print "Is conected? " + str(casco.isConnected())
-print casco.getStatus()
+headset.stopReading()
+bracelet.stopReading()
+
+headset.closePort()
+bracelet.closePort()
+
+print "------------------------------------------------"
+print "Headset: Is conected? " + str(headset.isConnected())
+print "Bracelet: Is conected? " + str(bracelet.isConnected())
+
+print headset.getStatus()
+print bracelet.getStatus()

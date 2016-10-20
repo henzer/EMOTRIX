@@ -35,7 +35,11 @@ class Headset(InputDeviceInterface):
 
     def connect(self, port, baudrate):
         try:
+            self.logger.info("Connecting to port \'{}\'...".format(port))
             self.device_handler = serial.Serial(port, baudrate, timeout=1)
+            self.logger.info(
+                "Connection to port \'{}\' established.".format(port)
+            )
             self.port = port
             self.baudrate = baudrate
         except Exception, e:
