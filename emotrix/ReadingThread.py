@@ -3,10 +3,9 @@ import logging
 import json
 import datetime
 import time
+import constants
 
 class ReadingThread(threading.Thread):
-    NUMBER_OF_SENSORS = 4
-    MAX_VALUE = 4095
     input_handler = None
     input_buffer = None
     stop_reading = False
@@ -68,7 +67,7 @@ class ReadingThread(threading.Thread):
                 )
 
             # TODO: Validate checksum
-            checksum = data.pop('cs')
+            checksum = data.pop("cs")
 
             # Process data
             try:
@@ -122,12 +121,12 @@ class ReadingThread(threading.Thread):
             {s1:KT,s2:HJ,s3:LS,s4:KL,cs:RH}
         """
         data = data.strip()
-        # self.logger.info('Parsing data: ' + data)
+        # self.logger.info("Parsing data: " + data)
 
-        expectedLenght = (6 * (self.NUMBER_OF_SENSORS + 1)) + 1
+        expectedLenght = (6 * (constants.NUMBER_OF_SENSORS + 1)) + 1
         if (len(data) != expectedLenght):
             self.logger.warning(
-                'Invalid length {}. Sample should have {} chars.'.format(
+                "Invalid length {}. Sample should have {} chars.".format(
                     len(data),
                     expectedLenght
                 )
@@ -141,7 +140,7 @@ class ReadingThread(threading.Thread):
         try:
             index = 4
             dataObject = {}
-            for i in range(0, self.NUMBER_OF_SENSORS):
+            for i in range(0, constants.NUMBER_OF_SENSORS):
                 dataObject["s" + str(i + 1)] = {
                     "char1" : ord(data[index]),
                     "char2" : ord(data[index + 1])
@@ -166,33 +165,33 @@ class ReadingThread(threading.Thread):
         # Assume that all were taken at the same time.
         timestamp = str(time.time())
         # Take only seconds
-        timestamp = timestamp[0 : timestamp.index('.')]
-        processedValues['readed_at'] = timestamp
+        timestamp = timestamp[0 : timestamp.index(".")]
+        processedValues["readed_at"] = timestamp
 
         for key in data:
-            binVal1 = "{0:b}".format(data[key]['char1'])
-            binVal2 = "{0:b}".format(data[key]['char2'])
-            binVal1 = binVal1.rjust(8, '0')
-            binVal2 = binVal2.rjust(8, '0')
+            binVal1 = "{0:b}".format(data[key]["char1"])
+            binVal2 = "{0:b}".format(data[key]["char2"])
+            binVal1 = binVal1.rjust(8, "0")
+            binVal2 = binVal2.rjust(8, "0")
             realValue = int(binVal1 + binVal2, 2)
 
-            if (realValue > self.MAX_VALUE):
+            if (realValue > constants.MAX_VALUE):
                 self.logger.warning(
-                    'Too large value received. {}:{}'.format(
+                    "Too large value received. {}:{}".format(
                         key,
                         data[key]
                     )
                 )
                 return {}
 
-            processedValues[key] = {'value': realValue}
+            processedValues[key] = {"value": realValue}
 
         return processedValues
 
     def __assertChecksum(self, data, checksum):
         suma = 0
         for key in data:
-            suma += data[key]['char1'] + data[key]['char2']
+            suma += data[key]["char1"] + data[key]["char2"]
 
         if (checksum == suma):
             return True

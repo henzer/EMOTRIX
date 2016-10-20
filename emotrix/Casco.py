@@ -2,18 +2,15 @@
 
 import serial
 import logging
+import random
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from ReadingThread import ReadingThread
 from Buffer import Buffer
-from QualityChecker import *
+import helpers
+import constants
 
 class Casco(InputDeviceInterface):
-
-    NUMBER_OF_SENSORS = 4
-    MAX_DEVIATION_STANDARD = None
-    MIN_DEVIATION_STANDARD = None
-
     db = None
     port = None
     baudrate = 0
@@ -21,26 +18,19 @@ class Casco(InputDeviceInterface):
     device_reader = None
     device_handler = None
     device_buffer = None
-    BUFFER_SIZE = 100
     logger = None
 
     def __init__(self):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        self.device_buffer = Buffer(self.BUFFER_SIZE)
+        self.device_buffer = Buffer(constants.BUFFER_SIZE)
 
-        deviation_standard_info = get_deviation_standard_range(
-            self.BUFFER_SIZE,
-            1000,
-            0,
-            4096
-        )
-        self.MIN_DEVIATION_STANDARD = deviation_standard_info[0]
-        self.MAX_DEVIATION_STANDARD = deviation_standard_info[1]
+        # Set bounds for good signal deviation standard.
+        self.__set_signal_quality_std_range()
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
-        self.__startDatabase()
+        self.__start_database()
 
     def connect(self, port, baudrate):
         try:
@@ -55,7 +45,20 @@ class Casco(InputDeviceInterface):
 
     def getStatus(self):
         currentData = self.device_buffer.getAll()
-        sensorsData = [[] for i in range(self.NUMBER_OF_SENSORS)]
+
+        # If the buffer is not full, the signal is bad.
+        if (len(currentData) != constants.BUFFER_SIZE):
+            status = {}
+            for i in range(0, constants.NUMBER_OF_SENSORS):
+                status["s" + str(i + 1)] = 0
+
+            self.logger.info(
+                "Not enough data to calculate the signal quality."
+            )
+
+            return status
+
+        sensorsData = [[] for i in range(constants.NUMBER_OF_SENSORS)]
         for sample in currentData:
             sample.pop('readed_at')
             index = 0
@@ -64,12 +67,30 @@ class Casco(InputDeviceInterface):
                 index += 1
 
         status = {}
-        for i in range(0, self.NUMBER_OF_SENSORS):
-            deviation = standard_deviation(sensorsData[i])
-            if ((deviation < self.MIN_DEVIATION_STANDARD) or (deviation > self.MAX_DEVIATION_STANDARD)):
-                status["s" + str(i + 1)] = "mala"
+        for i in range(0, constants.NUMBER_OF_SENSORS):
+            sensor_data_std = helpers.standard_deviation(sensorsData[i])
+
+            # No signal
+            if (
+                (sensor_data_std >= constants.NO_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.NO_SIGNAL_MAX_STD)
+            ):
+                status["s" + str(i + 1)] = 0
+            # Bad signal
+            elif (
+                (sensor_data_std >= constants.BAD_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.BAD_SIGNAL_MAX_STD)
+            ):
+                status["s" + str(i + 1)] = 1
+            # Good signal
+            elif (
+                (sensor_data_std >= constants.GOOD_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.GOOD_SIGNAL_MAX_STD)
+            ):
+                status["s" + str(i + 1)] = 3
+            # Signal out of range
             else:
-                status["s" + str(i + 1)] = "buena"
+                status["s" + str(i + 1)] = -1
 
         return status
 
@@ -109,7 +130,7 @@ class Casco(InputDeviceInterface):
         self.device_reader.join()
         self.is_reading = False
 
-    def __startDatabase(self):
+    def __start_database(self):
         self.logger.info("Starting mongo client...")
 
         try:
@@ -123,3 +144,50 @@ class Casco(InputDeviceInterface):
             raise Exception("Unable to connect to MongoDB server. \n" + str(e))
 
         self.logger.info("MongoDB server connection established.")
+
+    def __set_signal_quality_std_range(self):        
+        # No signal
+        deviation_standard_info = self.__get_std_range(
+            constants.BUFFER_SIZE,
+            1000,
+            constants.NO_SIGNAL_MAX_AMPLITUDE
+        )
+        constants.NO_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.NO_SIGNAL_MAX_STD = deviation_standard_info[1]
+
+        # Bad signal
+        deviation_standard_info = self.__get_std_range(
+            constants.BUFFER_SIZE,
+            1000,
+            constants.BAD_SIGNAL_MAX_AMPLITUDE
+        )
+        constants.BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
+
+        # Good sinal
+        deviation_standard_info = self.__get_std_range(
+            constants.BUFFER_SIZE,
+            1000,
+            constants.GOOD_SIGNAL_MAX_AMPLITUDE
+        )
+        constants.GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
+
+    def __get_std_range(self, n, m, amplt):
+        """
+        Gets an approximation of the bounds for the standard deviation
+        of a data set whose amplitude is amplt.
+        The algorithm generates n random values betwen 0 and amplt. Over
+        this n random values, calculates the standard deviation. Then,
+        it repeats this process m times and finally, gets the minimun
+        and maximum calculated standard deviation.
+        """
+        deviations = []
+        for i in range (0, m):
+            data = []
+            for i in range (0, n):
+                val = random.randint(0, amplt)
+                data.append(val)
+            deviations.append(helpers.standard_deviation(data))
+
+        return min(deviations), max(deviations)
