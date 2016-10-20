@@ -11,7 +11,7 @@ import helpers
 import constants
 
 
-class Casco(InputDeviceInterface):
+class Headset(InputDeviceInterface):
     db = None
     port = None
     baudrate = 0
