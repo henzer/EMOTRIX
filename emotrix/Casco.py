@@ -25,7 +25,7 @@ class Casco(InputDeviceInterface):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        self.device_buffer = Buffer(constants.BUFFER_SIZE)
+        self.device_buffer = Buffer(constants.HEADSET_BUFFER_SIZE)
 
         # Set bounds for good signal deviation standard.
         self.__set_signal_quality_std_range()
@@ -48,9 +48,9 @@ class Casco(InputDeviceInterface):
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.BUFFER_SIZE):
+        if (len(currentData) != constants.HEADSET_BUFFER_SIZE):
             status = {}
-            for i in range(0, constants.NUMBER_OF_SENSORS):
+            for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
                 status["s" + str(i + 1)] = 0
 
             self.logger.info(
@@ -59,7 +59,7 @@ class Casco(InputDeviceInterface):
 
             return status
 
-        sensorsData = [[] for i in range(constants.NUMBER_OF_SENSORS)]
+        sensorsData = [[] for i in range(constants.HEADSET_NUMBER_OF_SENSORS)]
         for sample in currentData:
             sample.pop('readed_at')
             index = 0
@@ -68,25 +68,25 @@ class Casco(InputDeviceInterface):
                 index += 1
 
         status = {}
-        for i in range(0, constants.NUMBER_OF_SENSORS):
+        for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
             sensor_data_std = helpers.standard_deviation(sensorsData[i])
 
             # No signal
             if (
-                (sensor_data_std >= constants.NO_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.NO_SIGNAL_MAX_STD)
+                (sensor_data_std >= constants.HEADSET_NO_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.HEADSET_NO_SIGNAL_MAX_STD)
             ):
                 status["s" + str(i + 1)] = 0
             # Bad signal
             elif (
-                (sensor_data_std >= constants.BAD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.BAD_SIGNAL_MAX_STD)
+                (sensor_data_std >= constants.HEADSET_BAD_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.HEADSET_BAD_SIGNAL_MAX_STD)
             ):
                 status["s" + str(i + 1)] = 1
             # Good signal
             elif (
-                (sensor_data_std >= constants.GOOD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.GOOD_SIGNAL_MAX_STD)
+                (sensor_data_std >= constants.HEADSET_GOOD_SIGNAL_MIN_STD) and
+                (sensor_data_std <= constants.HEADSET_GOOD_SIGNAL_MAX_STD)
             ):
                 status["s" + str(i + 1)] = 3
             # Signal out of range
@@ -155,30 +155,30 @@ class Casco(InputDeviceInterface):
     def __set_signal_quality_std_range(self):
         # No signal
         deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+            constants.HEADSET_BUFFER_SIZE,
             1000,
-            constants.NO_SIGNAL_MAX_AMPLITUDE
+            constants.HEADSET_NO_SIGNAL_MAX_AMPLITUDE
         )
-        constants.NO_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.NO_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.HEADSET_NO_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.HEADSET_NO_SIGNAL_MAX_STD = deviation_standard_info[1]
 
         # Bad signal
         deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+            constants.HEADSET_BUFFER_SIZE,
             1000,
-            constants.BAD_SIGNAL_MAX_AMPLITUDE
+            constants.HEADSET_BAD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.HEADSET_BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.HEADSET_BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
 
         # Good sinal
         deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+            constants.HEADSET_BUFFER_SIZE,
             1000,
-            constants.GOOD_SIGNAL_MAX_AMPLITUDE
+            constants.HEADSET_GOOD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.HEADSET_GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.HEADSET_GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
 
     def __get_std_range(self, n, m, amplt):
         """

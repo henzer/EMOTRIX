@@ -128,7 +128,7 @@ class HeadsetThreadReader(threading.Thread):
         data = data.strip()
         # self.logger.info("Parsing data: " + data)
 
-        expectedLenght = (6 * (constants.NUMBER_OF_SENSORS + 1)) + 1
+        expectedLenght = (6 * (constants.HEADSET_NUMBER_OF_SENSORS + 1)) + 1
         if (len(data) != expectedLenght):
             self.logger.warning(
                 "Invalid length {}. Sample should have {} chars.".format(
@@ -145,7 +145,7 @@ class HeadsetThreadReader(threading.Thread):
         try:
             index = 4
             dataObject = {}
-            for i in range(0, constants.NUMBER_OF_SENSORS):
+            for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
                 dataObject["s" + str(i + 1)] = {
                     "char1": ord(data[index]),
                     "char2": ord(data[index + 1])
@@ -179,7 +179,7 @@ class HeadsetThreadReader(threading.Thread):
             binVal2 = binVal2.rjust(8, "0")
             realValue = int(binVal1 + binVal2, 2)
 
-            if (realValue > constants.MAX_VALUE):
+            if (realValue > constants.HEADSET_MAX_VALUE):
                 self.logger.warning(
                     "Too large value received. {}:{}".format(
                         key,

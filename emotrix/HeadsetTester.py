@@ -4,7 +4,6 @@ import sys
 
 puerto = 'COM3'
 casco = Casco()
-# casco.processData()
 print "Conectando a puerto {}.".format(puerto)
 try:
     casco.connect(puerto, 9600)
