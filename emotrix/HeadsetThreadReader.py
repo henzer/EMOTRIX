@@ -3,11 +3,11 @@
 import threading
 import logging
 import json
-import datetime
 import time
 import constants
 
-class ReadingThread(threading.Thread):
+
+class HeadsetThreadReader(threading.Thread):
     input_handler = None
     input_buffer = None
     stop_reading = False
@@ -33,6 +33,9 @@ class ReadingThread(threading.Thread):
 
         if (self.persist_data and not self.db):
             raise Exception("Mongo db not defined!")
+
+        if (not self.input_buffer):
+            raise Exception("Buffer not initialized.")
 
         received_count = 0
         ignored_count = 0
@@ -79,7 +82,7 @@ class ReadingThread(threading.Thread):
                     continue
             except Exception, e:
                 raise Exception(
-                    "Getting real value process raise an exception. \n" + str(e)
+                    "Getting real value process raise an exception.\n" + str(e)
                 )
 
             # Sent data to buffer
@@ -102,7 +105,7 @@ class ReadingThread(threading.Thread):
                 self.db.helmet_data.insert_one(dataJson)
             except Exception, e:
                 raise Exception(
-                    "Persisting helmet data raise an exception.\n" + str(e)
+                    "Persisting data raise an exception.\n" + str(e)
                 )
 
         self.logger.info("Exiting thread: " + self.getName())
@@ -144,8 +147,8 @@ class ReadingThread(threading.Thread):
             dataObject = {}
             for i in range(0, constants.NUMBER_OF_SENSORS):
                 dataObject["s" + str(i + 1)] = {
-                    "char1" : ord(data[index]),
-                    "char2" : ord(data[index + 1])
+                    "char1": ord(data[index]),
+                    "char2": ord(data[index + 1])
                 }
                 index += 6
 
@@ -161,13 +164,12 @@ class ReadingThread(threading.Thread):
 
         return dataObject
 
-
     def __processValues(self, data):
         processedValues = {}
         # Assume that all were taken at the same time.
         timestamp = str(time.time())
         # Take only seconds
-        timestamp = timestamp[0 : timestamp.index(".")]
+        timestamp = timestamp[0: timestamp.index(".")]
         processedValues["readed_at"] = timestamp
 
         for key in data:

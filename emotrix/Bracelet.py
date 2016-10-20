@@ -5,13 +5,13 @@ import logging
 import random
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
-from HeadsetThreadReader import HeadsetThreadReader
+from BraceletThreadReader import BraceletThreadReader
 from Buffer import Buffer
 import helpers
 import constants
 
 
-class Casco(InputDeviceInterface):
+class Bracelet(InputDeviceInterface):
     db = None
     port = None
     baudrate = 0
@@ -25,10 +25,10 @@ class Casco(InputDeviceInterface):
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        self.device_buffer = Buffer(constants.BUFFER_SIZE)
+        self.device_buffer = Buffer(constants.BRACELET_BUFFER_SIZE)
 
         # Set bounds for good signal deviation standard.
-        self.__set_signal_quality_std_range()
+        # self.__set_signal_quality_std_range()
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__start_database()
@@ -122,7 +122,7 @@ class Casco(InputDeviceInterface):
         if (not self.device_buffer):
             raise Exception("Buffer not initialized.")
 
-        self.device_reader = HeadsetThreadReader(
+        self.device_reader = BraceletThreadReader(
             self.device_handler,
             self.device_buffer,
             self.db,
