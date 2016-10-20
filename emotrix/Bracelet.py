@@ -2,7 +2,6 @@
 
 import serial
 import logging
-import random
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from BraceletThreadReader import BraceletThreadReader
@@ -28,7 +27,7 @@ class Bracelet(InputDeviceInterface):
         self.device_buffer = Buffer(constants.BRACELET_BUFFER_SIZE)
 
         # Set bounds for good signal deviation standard.
-        # self.__set_signal_quality_std_range()
+        self.__set_signal_quality_std_ranges()
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__start_database()
@@ -48,50 +47,54 @@ class Bracelet(InputDeviceInterface):
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.BUFFER_SIZE):
-            status = {}
-            for i in range(0, constants.NUMBER_OF_SENSORS):
-                status["s" + str(i + 1)] = 0
-
+        if (len(currentData) != constants.BRACELET_BUFFER_SIZE):
             self.logger.info(
                 "Not enough data to calculate the signal quality."
             )
 
-            return status
+            return {"bpm": 0, "emg": 0}
 
-        sensorsData = [[] for i in range(constants.NUMBER_OF_SENSORS)]
+        emgData = []
+        bpmData = []
         for sample in currentData:
-            sample.pop('readed_at')
-            index = 0
-            for sensor in sample:
-                sensorsData[index].append(sample[sensor]["value"])
-                index += 1
+            emgData.append(sample["emg"])
+            bpmData.append(sample["bpm"])
 
         status = {}
-        for i in range(0, constants.NUMBER_OF_SENSORS):
-            sensor_data_std = helpers.standard_deviation(sensorsData[i])
 
-            # No signal
-            if (
-                (sensor_data_std >= constants.NO_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.NO_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 0
-            # Bad signal
-            elif (
-                (sensor_data_std >= constants.BAD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.BAD_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 1
-            # Good signal
-            elif (
-                (sensor_data_std >= constants.GOOD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.GOOD_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 3
-            # Signal out of range
-            else:
-                status["s" + str(i + 1)] = -1
+        # Check standard deviation of EMG data
+        emg_data_std = helpers.standard_deviation(emgData)
+
+        # No signal
+        if (
+            (emg_data_std >= constants.BRACELET_NO_SIGNAL_MIN_STD) and
+            (emg_data_std <= constants.BRACELET_NO_SIGNAL_MAX_STD)
+        ):
+            status["emg"] = 0
+        # Bad signal
+        elif (
+            (emg_data_std >= constants.BRACELET_BAD_SIGNAL_MIN_STD) and
+            (emg_data_std <= constants.BRACELET_BAD_SIGNAL_MAX_STD)
+        ):
+            status["emg"] = 1
+        # Good signal
+        elif (
+            (emg_data_std >= constants.BRACELET_GOOD_SIGNAL_MIN_STD) and
+            (emg_data_std <= constants.BRACELET_GOOD_SIGNAL_MAX_STD)
+        ):
+            status["emg"] = 3
+        # Signal out of range
+        else:
+            status["emg"] = -1
+
+        # Average heart rate
+        if (
+            (helpers.average(bpmData) >= constants.MIN_HEART_RATE) and
+            (helpers.average(bpmData) <= constants.MAX_HEART_RATE)
+        ):
+            status["bpm"] = 1
+        else:
+            status["bpm"] = 0
 
         return status
 
@@ -152,49 +155,30 @@ class Bracelet(InputDeviceInterface):
 
         self.logger.info("MongoDB server connection established.")
 
-    def __set_signal_quality_std_range(self):
+    def __set_signal_quality_std_ranges(self):
         # No signal
-        deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+        deviation_standard_info = helpers.get_std_range(
+            constants.BRACELET_BUFFER_SIZE,
             1000,
-            constants.NO_SIGNAL_MAX_AMPLITUDE
+            constants.BRACELET_NO_SIGNAL_MAX_AMPLITUDE
         )
-        constants.NO_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.NO_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.BRACELET_NO_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.BRACELET_NO_SIGNAL_MAX_STD = deviation_standard_info[1]
 
         # Bad signal
-        deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+        deviation_standard_info = helpers.get_std_range(
+            constants.BRACELET_BUFFER_SIZE,
             1000,
-            constants.BAD_SIGNAL_MAX_AMPLITUDE
+            constants.BRACELET_BAD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.BRACELET_BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.BRACELET_BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
 
         # Good sinal
-        deviation_standard_info = self.__get_std_range(
-            constants.BUFFER_SIZE,
+        deviation_standard_info = helpers.get_std_range(
+            constants.BRACELET_BUFFER_SIZE,
             1000,
-            constants.GOOD_SIGNAL_MAX_AMPLITUDE
+            constants.BRACELET_GOOD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
-
-    def __get_std_range(self, n, m, amplt):
-        """
-        Gets an approximation of the bounds for the standard deviation
-        of a data set whose amplitude is amplt.
-        The algorithm generates n random values betwen 0 and amplt. Over
-        this n random values, calculates the standard deviation. Then,
-        it repeats this process m times and finally, gets the minimun
-        and maximum calculated standard deviation.
-        """
-        deviations = []
-        for i in range(0, m):
-            data = []
-            for i in range(0, n):
-                val = random.randint(0, amplt)
-                data.append(val)
-            deviations.append(helpers.standard_deviation(data))
-
-        return min(deviations), max(deviations)
+        constants.BRACELET_GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
+        constants.BRACELET_GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
