@@ -110,7 +110,7 @@ class Headset(InputDeviceInterface):
             sample.pop('readed_at')
             index = 0
             for sensor in sample:
-                sensorsData[index].append(sample[sensor]["value"])
+                sensorsData[index].append(sample[sensor])
                 index += 1
 
         status = {}

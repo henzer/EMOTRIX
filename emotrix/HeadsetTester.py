@@ -14,7 +14,7 @@ except Exception, e:
 print "Is conected? " + str(casco.isConnected())
 print "----------------"
 casco.startReading(persist_data=False)
-time.sleep(60)
+time.sleep(5)
 casco.stopReading()
 casco.closePort()
 print "----------------"
