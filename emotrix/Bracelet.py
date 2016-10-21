@@ -47,61 +47,6 @@ class Bracelet(InputDeviceInterface):
     def isConnected(self):
         return self.device_handler.isOpen()
 
-    def getStatus(self):
-        currentData = self.device_buffer.getAll()
-
-        # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.BRACELET_BUFFER_SIZE):
-            self.logger.info(
-                "Not enough data to calculate the signal quality."
-            )
-
-            return {"bpm": 0, "emg": 0}
-
-        emgData = []
-        bpmData = []
-        for sample in currentData:
-            emgData.append(sample["emg"])
-            bpmData.append(sample["bpm"])
-
-        status = {}
-
-        # Check standard deviation of EMG data
-        emg_data_std = helpers.standard_deviation(emgData)
-
-        # No signal
-        if (
-            (emg_data_std >= constants.BRACELET_NO_SIGNAL_MIN_STD) and
-            (emg_data_std <= constants.BRACELET_NO_SIGNAL_MAX_STD)
-        ):
-            status["emg"] = 0
-        # Bad signal
-        elif (
-            (emg_data_std >= constants.BRACELET_BAD_SIGNAL_MIN_STD) and
-            (emg_data_std <= constants.BRACELET_BAD_SIGNAL_MAX_STD)
-        ):
-            status["emg"] = 1
-        # Good signal
-        elif (
-            (emg_data_std >= constants.BRACELET_GOOD_SIGNAL_MIN_STD) and
-            (emg_data_std <= constants.BRACELET_GOOD_SIGNAL_MAX_STD)
-        ):
-            status["emg"] = 3
-        # Signal out of range
-        else:
-            status["emg"] = -1
-
-        # Average heart rate
-        if (
-            (helpers.average(bpmData) >= constants.MIN_HEART_RATE) and
-            (helpers.average(bpmData) <= constants.MAX_HEART_RATE)
-        ):
-            status["bpm"] = 1
-        else:
-            status["bpm"] = 0
-
-        return status
-
     def closePort(self):
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
@@ -144,6 +89,40 @@ class Bracelet(InputDeviceInterface):
         self.device_reader.join()
         self.is_reading = False
 
+    def getStatus(self):
+        currentData = self.device_buffer.getAll()
+
+        # If the buffer is not full, the signal is bad.
+        if (len(currentData) != constants.BRACELET_BUFFER_SIZE):
+            self.logger.info(
+                "Not enough data to calculate the signal quality."
+            )
+
+            return {"bpm": 0, "emg": 0}
+
+        emgData = []
+        bpmData = []
+        for sample in currentData:
+            emgData.append(sample["emg"])
+            bpmData.append(sample["bpm"])
+
+        status = {}
+
+        # No signal
+        if (self.__is_no_signal(emgData)):
+            status["emg"] = 0
+        # Good signal
+        elif (self.__is_good_signal(emgData)):
+            status["emg"] = 3
+        # Bad signal
+        else:
+            status["emg"] = 1
+
+        # Average heart rate
+        status["bpm"] = 1 if self.__is_heart_rate_valid(bpmData) else 0
+
+        return status
+
     def __start_database(self):
         self.logger.info("Starting mongo client...")
 
@@ -160,24 +139,6 @@ class Bracelet(InputDeviceInterface):
         self.logger.info("MongoDB server connection established.")
 
     def __set_signal_quality_std_ranges(self):
-        # No signal
-        deviation_standard_info = helpers.get_std_range(
-            constants.BRACELET_BUFFER_SIZE,
-            1000,
-            constants.BRACELET_NO_SIGNAL_MAX_AMPLITUDE
-        )
-        constants.BRACELET_NO_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.BRACELET_NO_SIGNAL_MAX_STD = deviation_standard_info[1]
-
-        # Bad signal
-        deviation_standard_info = helpers.get_std_range(
-            constants.BRACELET_BUFFER_SIZE,
-            1000,
-            constants.BRACELET_BAD_SIGNAL_MAX_AMPLITUDE
-        )
-        constants.BRACELET_BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.BRACELET_BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
-
         # Good sinal
         deviation_standard_info = helpers.get_std_range(
             constants.BRACELET_BUFFER_SIZE,
@@ -186,3 +147,36 @@ class Bracelet(InputDeviceInterface):
         )
         constants.BRACELET_GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
         constants.BRACELET_GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
+
+    def __is_no_signal(self, samples):
+        min_value = constants.BRACELET_CENTER - (
+            constants.BRACELET_NO_SIGNAL_MAX_AMPLITUDE / 2
+        )
+
+        max_value = constants.BRACELET_CENTER + (
+            constants.BRACELET_NO_SIGNAL_MAX_AMPLITUDE / 2
+        )
+
+        if ((min(samples) >= min_value) and (max(samples) <= max_value)):
+            return True
+
+        return False
+
+    def __is_good_signal(self, samples):
+        data_std = helpers.standard_deviation(samples)
+
+        if (
+            (data_std >= constants.BRACELET_GOOD_SIGNAL_MIN_STD) and
+            (data_std <= constants.BRACELET_GOOD_SIGNAL_MAX_STD)
+        ):
+            return True
+
+        return False
+
+    def __is_heart_rate_valid(self, samples):
+        average = helpers.average(samples)
+
+        if (constants.MIN_HEART_RATE <= average <= constants.MAX_HEART_RATE):
+            return True
+
+        return False

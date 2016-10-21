@@ -2,7 +2,7 @@ from Bracelet import Bracelet
 import time
 import sys
 
-puerto = 'COM4'
+puerto = 'COM3'
 bracelet = Bracelet()
 print "Conectando a puerto {}.".format(puerto)
 try:
@@ -13,7 +13,7 @@ except Exception, e:
 
 print "Is conected? " + str(bracelet.isConnected())
 print "----------------"
-bracelet.startReading(persist_data = True)
+bracelet.startReading(persist_data=False)
 time.sleep(10)
 bracelet.stopReading()
 bracelet.closePort()

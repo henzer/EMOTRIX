@@ -48,57 +48,6 @@ class Headset(InputDeviceInterface):
     def isConnected(self):
         return self.device_handler.isOpen()
 
-    def getStatus(self):
-        currentData = self.device_buffer.getAll()
-
-        # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.HEADSET_BUFFER_SIZE):
-            status = {}
-            for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
-                status["s" + str(i + 1)] = 0
-
-            self.logger.info(
-                "Not enough data to calculate the signal quality."
-            )
-
-            return status
-
-        sensorsData = [[] for i in range(constants.HEADSET_NUMBER_OF_SENSORS)]
-        for sample in currentData:
-            sample.pop('readed_at')
-            index = 0
-            for sensor in sample:
-                sensorsData[index].append(sample[sensor]["value"])
-                index += 1
-
-        status = {}
-        for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
-            sensor_data_std = helpers.standard_deviation(sensorsData[i])
-
-            # No signal
-            if (
-                (sensor_data_std >= constants.HEADSET_NO_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.HEADSET_NO_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 0
-            # Bad signal
-            elif (
-                (sensor_data_std >= constants.HEADSET_BAD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.HEADSET_BAD_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 1
-            # Good signal
-            elif (
-                (sensor_data_std >= constants.HEADSET_GOOD_SIGNAL_MIN_STD) and
-                (sensor_data_std <= constants.HEADSET_GOOD_SIGNAL_MAX_STD)
-            ):
-                status["s" + str(i + 1)] = 3
-            # Signal out of range
-            else:
-                status["s" + str(i + 1)] = -1
-
-        return status
-
     def closePort(self):
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
@@ -141,6 +90,43 @@ class Headset(InputDeviceInterface):
         self.device_reader.join()
         self.is_reading = False
 
+    def getStatus(self):
+        currentData = self.device_buffer.getAll()
+
+        # If the buffer is not full, the signal is bad.
+        if (len(currentData) != constants.HEADSET_BUFFER_SIZE):
+            status = {}
+            for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
+                status["s" + str(i + 1)] = 0
+
+            self.logger.info(
+                "Not enough data to calculate the signal quality."
+            )
+
+            return status
+
+        sensorsData = [[] for i in range(constants.HEADSET_NUMBER_OF_SENSORS)]
+        for sample in currentData:
+            sample.pop('readed_at')
+            index = 0
+            for sensor in sample:
+                sensorsData[index].append(sample[sensor]["value"])
+                index += 1
+
+        status = {}
+        for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
+            # No signal
+            if (self.__is_no_signal(sensorsData[i])):
+                status["s" + str(i + 1)] = 0
+            # Good signal
+            elif (self.__is_good_signal(sensorsData[i])):
+                status["s" + str(i + 1)] = 3
+            # Bad signal
+            else:
+                status["s" + str(i + 1)] = 1
+
+        return status
+
     def __start_database(self):
         self.logger.info("Starting mongo client...")
 
@@ -157,24 +143,6 @@ class Headset(InputDeviceInterface):
         self.logger.info("MongoDB server connection established.")
 
     def __set_signal_quality_std_range(self):
-        # No signal
-        deviation_standard_info = self.__get_std_range(
-            constants.HEADSET_BUFFER_SIZE,
-            1000,
-            constants.HEADSET_NO_SIGNAL_MAX_AMPLITUDE
-        )
-        constants.HEADSET_NO_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.HEADSET_NO_SIGNAL_MAX_STD = deviation_standard_info[1]
-
-        # Bad signal
-        deviation_standard_info = self.__get_std_range(
-            constants.HEADSET_BUFFER_SIZE,
-            1000,
-            constants.HEADSET_BAD_SIGNAL_MAX_AMPLITUDE
-        )
-        constants.HEADSET_BAD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.HEADSET_BAD_SIGNAL_MAX_STD = deviation_standard_info[1]
-
         # Good sinal
         deviation_standard_info = self.__get_std_range(
             constants.HEADSET_BUFFER_SIZE,
@@ -202,3 +170,28 @@ class Headset(InputDeviceInterface):
             deviations.append(helpers.standard_deviation(data))
 
         return min(deviations), max(deviations)
+
+    def __is_no_signal(self, samples):
+        min_value = constants.HEADSET_CENTER - (
+            constants.HEADSET_NO_SIGNAL_MAX_AMPLITUDE / 2
+        )
+
+        max_value = constants.HEADSET_CENTER + (
+            constants.HEADSET_NO_SIGNAL_MAX_AMPLITUDE / 2
+        )
+
+        if ((min(samples) >= min_value) and (max(samples) <= max_value)):
+            return True
+
+        return False
+
+    def __is_good_signal(self, samples):
+        data_std = helpers.standard_deviation(samples)
+
+        if (
+            (data_std >= constants.HEADSET_GOOD_SIGNAL_MIN_STD) and
+            (data_std <= constants.HEADSET_GOOD_SIGNAL_MAX_STD)
+        ):
+            return True
+
+        return False
