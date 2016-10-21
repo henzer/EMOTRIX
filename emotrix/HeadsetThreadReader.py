@@ -71,9 +71,6 @@ class HeadsetThreadReader(threading.Thread):
                     "Parsing procces raise an exception. \n" + str(e)
                 )
 
-            # TODO: Validate checksum
-            checksum = data.pop("cs")
-
             # Process data
             try:
                 data = self.__processValues(data)
@@ -84,6 +81,25 @@ class HeadsetThreadReader(threading.Thread):
                 raise Exception(
                     "Getting real value process raise an exception.\n" + str(e)
                 )
+
+            # Validate checksum
+            checksum = data.pop("cs")
+            if (not self.__assertChecksum(data, checksum)):
+                self.logger.warning(
+                    "Invalid data. Checksum doesn't match: {}\n{}".format(
+                        checksum,
+                        str(data)
+                    )
+                )
+                ignored_count += 1
+
+                continue
+
+            # Assume that all were taken at the same time.
+            timestamp = str(time.time())
+            # Take only seconds
+            timestamp = timestamp[0: timestamp.index(".")]
+            data["readed_at"] = timestamp
 
             # Sent data to buffer
             self.input_buffer.insert(data)
@@ -166,11 +182,6 @@ class HeadsetThreadReader(threading.Thread):
 
     def __processValues(self, data):
         processedValues = {}
-        # Assume that all were taken at the same time.
-        timestamp = str(time.time())
-        # Take only seconds
-        timestamp = timestamp[0: timestamp.index(".")]
-        processedValues["readed_at"] = timestamp
 
         for key in data:
             binVal1 = "{0:b}".format(data[key]["char1"])
@@ -179,7 +190,7 @@ class HeadsetThreadReader(threading.Thread):
             binVal2 = binVal2.rjust(8, "0")
             realValue = int(binVal1 + binVal2, 2)
 
-            if (realValue > constants.HEADSET_MAX_VALUE):
+            if ((key != 'cs') and (realValue > constants.HEADSET_MAX_VALUE)):
                 self.logger.warning(
                     "Too large value received. {}:{}".format(
                         key,
@@ -188,14 +199,14 @@ class HeadsetThreadReader(threading.Thread):
                 )
                 return {}
 
-            processedValues[key] = {"value": realValue}
+            processedValues[key] = realValue
 
         return processedValues
 
     def __assertChecksum(self, data, checksum):
         suma = 0
         for key in data:
-            suma += data[key]["char1"] + data[key]["char2"]
+            suma += int(data[key])
 
         if (checksum == suma):
             return True
