@@ -12,6 +12,7 @@ class HeadsetThreadReader(threading.Thread):
     input_buffer = None
     stop_reading = False
     persist_data = False
+    sample_length = 0
     db = None
     logger = None
 
@@ -23,6 +24,8 @@ class HeadsetThreadReader(threading.Thread):
         self.input_buffer = input_buffer
         self.persist_data = persist_data
         self.db = db
+        # 4 electrodes => {s1:KT,s2:HJ,s3:LS,s4:KL,cs:RH}
+        self.sample_length = 6 * (constants.HEADSET_NUMBER_OF_SENSORS + 1) + 1
 
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
@@ -51,8 +54,7 @@ class HeadsetThreadReader(threading.Thread):
                         data = ""
 
                 # Complete a sample
-                while (len(data) != 31):
-                    data += self.input_handler.read(1)
+                data += self.input_handler.read(self.sample_length - 3)
 
             except Exception, e:
                 raise Exception(
@@ -144,12 +146,11 @@ class HeadsetThreadReader(threading.Thread):
         data = data.strip()
         # self.logger.info("Parsing data: " + data)
 
-        expectedLenght = (6 * (constants.HEADSET_NUMBER_OF_SENSORS + 1)) + 1
-        if (len(data) != expectedLenght):
+        if (len(data) != self.sample_length):
             self.logger.warning(
                 "Invalid length {}. Sample should have {} chars.".format(
                     len(data),
-                    expectedLenght
+                    self.sample_length
                 )
             )
             return {}
