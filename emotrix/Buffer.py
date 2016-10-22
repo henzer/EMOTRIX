@@ -12,7 +12,7 @@ class Buffer:
         self.insertTimeStamp()
         if (len(self.buffer) > self.buffer_size):
             self.buffer.pop(0)
-            self.buffer_size.pop(0)
+            self.buffer_time.pop(0)
 
     def getAll(self):
         return self.buffer
