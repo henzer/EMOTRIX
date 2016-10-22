@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Object representation for Bracelet device.
+"""
 
 import serial
 import logging
@@ -20,8 +23,13 @@ class Bracelet(InputDeviceInterface):
     device_buffer = None
     logger = None
 
-    def __init__(self):
-        logging.basicConfig(level=logging.INFO)
+    def __init__(self, logging_level=logging.ERROR):
+        """
+        Creates an insance of Headset class and initializes the mandatory
+        variables required by the reading process. Optionally, can receive
+        the level for logging. This could be useful for debugging process.
+        """
+        logging.basicConfig(level=logging_level)
         self.logger = logging.getLogger(__name__)
 
         self.device_buffer = Buffer(constants.BRACELET_BUFFER_SIZE)
@@ -33,6 +41,11 @@ class Bracelet(InputDeviceInterface):
         self.__start_database()
 
     def connect(self, port, baudrate):
+        """
+        Attempts to establish a connection to the port received, with
+        a baud rate of baudrate.
+        Check PySerial's docs for possible values for baudrate.
+        """
         try:
             self.logger.info("Connecting to port \'{}\'...".format(port))
             self.device_handler = serial.Serial(port, baudrate, timeout=1)
@@ -45,9 +58,16 @@ class Bracelet(InputDeviceInterface):
             raise e
 
     def isConnected(self):
+        """
+        Check if headset device is connected.
+        """
         return self.device_handler.isOpen()
 
     def closePort(self):
+        """
+        Close current connection. If device isn't connected or program
+        is still reading, it does nothing.
+        """
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
             self.logger.info("Device is not conected.")
@@ -65,6 +85,11 @@ class Bracelet(InputDeviceInterface):
         return True
 
     def startReading(self, persist_data=False):
+        """
+        Starts the serial port reading. If device isn't connected, throws
+        and exception.
+        *persist_data*: boolean to set if data must be stored en mongodb.
+        """
         if (not self.isConnected()):
             raise Exception("Device is not conected.")
 
@@ -85,11 +110,30 @@ class Bracelet(InputDeviceInterface):
         self.is_reading = True
 
     def stopReading(self):
+        """
+        Stops current reading process.
+        Warning: this method doesn't close the port.
+        """
         self.device_reader.stopReading()
         self.device_reader.join()
         self.is_reading = False
 
     def getStatus(self):
+        """
+        Gets the quality of signal receiving from Bracelet device.
+        The bracelet sends the value of the EMG signal and actual values
+        for BPM (beats per minute).
+        So this function returns a python dictionary like this:
+            {"bpm": 3, "emg": 1}
+        Possible values for "bmp" are:
+            - 1: if the average of the readings taken at the last second is
+            between the valid range of BMP.
+            - 0: Otherwise
+        Possible values for "emg" are:
+            - 0: No signal
+            - 1: Bad signal
+            - 3: Good signal
+        """
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.

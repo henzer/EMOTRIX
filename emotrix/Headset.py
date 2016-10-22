@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Object representation for Headset device.
+"""
 
 import serial
 import logging
@@ -21,8 +24,13 @@ class Headset(InputDeviceInterface):
     device_buffer = None
     logger = None
 
-    def __init__(self):
-        logging.basicConfig(level=logging.INFO)
+    def __init__(self, logging_level=logging.ERROR):
+        """
+        Creates an insance of Headset class and initializes the mandatory
+        variables required by the reading process. Optionally, can receive
+        the level for logging. This could be useful for debugging process.
+        """
+        logging.basicConfig(level=logging_level)
         self.logger = logging.getLogger(__name__)
 
         self.device_buffer = Buffer(constants.HEADSET_BUFFER_SIZE)
@@ -34,6 +42,11 @@ class Headset(InputDeviceInterface):
         self.__start_database()
 
     def connect(self, port, baudrate):
+        """
+        Attempts to establish a connection to the port received, with
+        a baud rate of baudrate.
+        Check PySerial's docs for possible values for baudrate.
+        """
         try:
             self.logger.info("Connecting to port \'{}\'...".format(port))
             self.device_handler = serial.Serial(port, baudrate, timeout=1)
@@ -46,9 +59,16 @@ class Headset(InputDeviceInterface):
             raise e
 
     def isConnected(self):
+        """
+        Check if headset device is connected.
+        """
         return self.device_handler.isOpen()
 
     def closePort(self):
+        """
+        Close current connection. If device isn't connected or program
+        is still reading, it does nothing.
+        """
         # Si no esta conectado, no puede cerrar.
         if (not self.isConnected()):
             self.logger.info("Device is not conected.")
@@ -66,6 +86,11 @@ class Headset(InputDeviceInterface):
         return True
 
     def startReading(self, persist_data=False):
+        """
+        Starts the serial port reading. If device isn't connected, throws
+        and exception.
+        *persist_data*: boolean to set if data must be stored en mongodb.
+        """
         if (not self.isConnected()):
             raise Exception("Device is not conected.")
 
@@ -86,11 +111,23 @@ class Headset(InputDeviceInterface):
         self.is_reading = True
 
     def stopReading(self):
+        """
+        Stops current reading process.
+        Warning: this method doesn't close the port.
+        """
         self.device_reader.stopReading()
         self.device_reader.join()
         self.is_reading = False
 
     def getStatus(self):
+        """
+        Gets the quality of signal of each sensor. It returns a python
+        dictionary like this: {"s1": 0, "s2": 3, ...}
+        Possible values for each sensor are:
+            - 0: No signal
+            - 1: Bad signal
+            - 3: Good signal
+        """
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.

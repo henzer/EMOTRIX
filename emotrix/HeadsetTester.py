@@ -1,9 +1,10 @@
 from Headset import Headset
+import logging
 import time
 import sys
 
 puerto = 'COM3'
-casco = Headset()
+casco = Headset(logging.INFO)
 print "Conectando a puerto {}.".format(puerto)
 try:
     casco.connect(puerto, 9600)

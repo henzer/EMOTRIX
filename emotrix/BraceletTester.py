@@ -1,9 +1,10 @@
 from Bracelet import Bracelet
+import logging
 import time
 import sys
 
 puerto = 'COM3'
-bracelet = Bracelet()
+bracelet = Bracelet(logging.INFO)
 print "Conectando a puerto {}.".format(puerto)
 try:
     bracelet.connect(puerto, 9600)
