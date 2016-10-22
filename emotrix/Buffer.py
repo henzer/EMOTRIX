@@ -1,6 +1,3 @@
-import time
-
-
 class Buffer:
     def __init__(self, buffer_size):
         self.buffer = []
