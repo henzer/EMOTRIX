@@ -8,7 +8,7 @@ import logging
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from BraceletThreadReader import BraceletThreadReader
-from Buffer import Buffer
+from TimeBuffer import TimeBuffer
 import helpers
 import constants
 
@@ -32,7 +32,7 @@ class Bracelet(InputDeviceInterface):
         logging.basicConfig(level=logging_level)
         self.logger = logging.getLogger(__name__)
 
-        self.device_buffer = Buffer(constants.BRACELET_BUFFER_SIZE)
+        self.device_buffer = TimeBuffer(constants.BRACELET_TIME_WINDOW_SIZE)
 
         # Set bounds for good signal deviation standard.
         self.__set_signal_quality_std_ranges()
@@ -137,9 +137,11 @@ class Bracelet(InputDeviceInterface):
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.BRACELET_BUFFER_SIZE):
+        if (len(currentData) < constants.BRACELET_MIN_BUFFER_SIZE):
             self.logger.info(
-                "Not enough data to calculate the signal quality."
+                "Not enough data to check signal quality. {} found.".format(
+                    len(currentData)
+                )
             )
 
             return {"bpm": 0, "emg": 0}
@@ -165,6 +167,10 @@ class Bracelet(InputDeviceInterface):
         # Average heart rate
         status["bpm"] = 1 if self.__is_heart_rate_valid(bpmData) else 0
 
+        self.logger.info(
+            "Status calculated on {} samples.".format(len(currentData))
+        )
+
         return status
 
     def __start_database(self):
@@ -185,7 +191,7 @@ class Bracelet(InputDeviceInterface):
     def __set_signal_quality_std_ranges(self):
         # Good sinal
         deviation_standard_info = helpers.get_std_range(
-            constants.BRACELET_BUFFER_SIZE,
+            constants.BRACELET_MIN_BUFFER_SIZE,
             1000,
             constants.BRACELET_GOOD_SIGNAL_MAX_AMPLITUDE
         )

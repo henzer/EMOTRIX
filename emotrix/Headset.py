@@ -9,7 +9,7 @@ import random
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from HeadsetThreadReader import HeadsetThreadReader
-from Buffer import Buffer
+from TimeBuffer import TimeBuffer
 import helpers
 import constants
 
@@ -33,7 +33,7 @@ class Headset(InputDeviceInterface):
         logging.basicConfig(level=logging_level)
         self.logger = logging.getLogger(__name__)
 
-        self.device_buffer = Buffer(constants.HEADSET_BUFFER_SIZE)
+        self.device_buffer = TimeBuffer(constants.HEADSET_TIME_WINDOW_SIZE)
 
         # Set bounds for good signal deviation standard.
         self.__set_signal_quality_std_range()
@@ -131,13 +131,15 @@ class Headset(InputDeviceInterface):
         currentData = self.device_buffer.getAll()
 
         # If the buffer is not full, the signal is bad.
-        if (len(currentData) != constants.HEADSET_BUFFER_SIZE):
+        if (len(currentData) < constants.HEADSET_MIN_BUFFER_SIZE):
             status = {}
             for i in range(0, constants.HEADSET_NUMBER_OF_SENSORS):
                 status["s" + str(i + 1)] = 0
 
             self.logger.info(
-                "Not enough data to calculate the signal quality."
+                "Not enough data to check signal quality. {} found.".format(
+                    len(currentData)
+                )
             )
 
             return status
@@ -162,6 +164,10 @@ class Headset(InputDeviceInterface):
             else:
                 status["s" + str(i + 1)] = 1
 
+        self.logger.info(
+            "Status calculated on {} samples.".format(len(currentData))
+        )
+
         return status
 
     def __start_database(self):
@@ -182,7 +188,7 @@ class Headset(InputDeviceInterface):
     def __set_signal_quality_std_range(self):
         # Good sinal
         deviation_standard_info = self.__get_std_range(
-            constants.HEADSET_BUFFER_SIZE,
+            constants.HEADSET_MIN_BUFFER_SIZE,
             1000,
             constants.HEADSET_GOOD_SIGNAL_MAX_AMPLITUDE
         )

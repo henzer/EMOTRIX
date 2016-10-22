@@ -7,7 +7,7 @@ puerto = 'COM3'
 bracelet = Bracelet(logging.INFO)
 print "Conectando a puerto {}.".format(puerto)
 try:
-    bracelet.connect(puerto, 9600)
+    bracelet.connect(puerto, 115200)
 except Exception, e:
     print e
     sys.exit(0)

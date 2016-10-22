@@ -7,7 +7,7 @@ puerto = 'COM3'
 casco = Headset(logging.INFO)
 print "Conectando a puerto {}.".format(puerto)
 try:
-    casco.connect(puerto, 9600)
+    casco.connect(puerto, 115200)
 except Exception, e:
     print e
     sys.exit(0)
