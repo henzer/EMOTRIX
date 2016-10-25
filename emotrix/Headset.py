@@ -5,7 +5,6 @@ Object representation for Headset device.
 
 import serial
 import logging
-import random
 from pymongo import MongoClient
 from InputDeviceInterface import InputDeviceInterface
 from HeadsetThreadReader import HeadsetThreadReader
@@ -36,7 +35,7 @@ class Headset(InputDeviceInterface):
         self.device_buffer = TimeBuffer(constants.HEADSET_TIME_WINDOW_SIZE)
 
         # Set bounds for good signal deviation standard.
-        self.__set_signal_quality_std_range()
+        self.__set_signal_quality_variance_range()
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__start_database()
@@ -185,34 +184,15 @@ class Headset(InputDeviceInterface):
 
         self.logger.info("MongoDB server connection established.")
 
-    def __set_signal_quality_std_range(self):
+    def __set_signal_quality_variance_range(self):
         # Good sinal
-        deviation_standard_info = self.__get_std_range(
+        variance_info = helpers.get_variance_range(
             constants.HEADSET_MIN_BUFFER_SIZE,
             1000,
             constants.HEADSET_GOOD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.HEADSET_GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.HEADSET_GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
-
-    def __get_std_range(self, n, m, amplt):
-        """
-        Gets an approximation of the bounds for the standard deviation
-        of a data set whose amplitude is amplt.
-        The algorithm generates n random values betwen 0 and amplt. Over
-        this n random values, calculates the standard deviation. Then,
-        it repeats this process m times and finally, gets the minimun
-        and maximum calculated standard deviation.
-        """
-        deviations = []
-        for i in range(0, m):
-            data = []
-            for i in range(0, n):
-                val = random.randint(0, amplt)
-                data.append(val)
-            deviations.append(helpers.standard_deviation(data))
-
-        return min(deviations), max(deviations)
+        constants.HEADSET_GOOD_SIGNAL_MIN_VAR = variance_info[0]
+        constants.HEADSET_GOOD_SIGNAL_MAX_VAR = variance_info[1]
 
     def __is_no_signal(self, samples):
         min_value = constants.HEADSET_CENTER - (
@@ -229,11 +209,11 @@ class Headset(InputDeviceInterface):
         return False
 
     def __is_good_signal(self, samples):
-        data_std = helpers.standard_deviation(samples)
+        data_variance = helpers.variance(samples)
 
         if (
-            (data_std >= constants.HEADSET_GOOD_SIGNAL_MIN_STD) and
-            (data_std <= constants.HEADSET_GOOD_SIGNAL_MAX_STD)
+            (data_variance >= constants.HEADSET_GOOD_SIGNAL_MIN_VAR) and
+            (data_variance <= constants.HEADSET_GOOD_SIGNAL_MAX_VAR)
         ):
             return True
 

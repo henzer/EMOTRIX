@@ -191,7 +191,7 @@ class HeadsetThreadReader(threading.Thread):
             binVal2 = binVal2.rjust(8, "0")
             realValue = int(binVal1 + binVal2, 2)
 
-            if ((key != 'cs') and (realValue > constants.HEADSET_MAX_VALUE)):
+            if ((key != 'cs') and (realValue > constants.HEADSET_EEG_MAX_VALUE)):
                 self.logger.warning(
                     "Too large value received. {}:{}".format(
                         key,

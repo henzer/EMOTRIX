@@ -35,7 +35,7 @@ class Bracelet(InputDeviceInterface):
         self.device_buffer = TimeBuffer(constants.BRACELET_TIME_WINDOW_SIZE)
 
         # Set bounds for good signal deviation standard.
-        self.__set_signal_quality_std_ranges()
+        self.__set_signal_quality_variance_range()
 
         # Can raise an pymongo.errors.ServerSelectionTimeoutError
         self.__start_database()
@@ -126,9 +126,10 @@ class Bracelet(InputDeviceInterface):
         So this function returns a python dictionary like this:
             {"bpm": 3, "emg": 1}
         Possible values for "bmp" are:
-            - 1: if the average of the readings taken at the last second is
-            between the valid range of BMP.
-            - 0: Otherwise
+            - 0: No signal
+            - 1: Bad signal
+            - 3: Good signal. The average of the readings taken at the last
+            second is between the valid range of BMP.
         Possible values for "emg" are:
             - 0: No signal
             - 1: Bad signal
@@ -165,7 +166,14 @@ class Bracelet(InputDeviceInterface):
             status["emg"] = 1
 
         # Average heart rate
-        status["bpm"] = 1 if self.__is_heart_rate_valid(bpmData) else 0
+        if (
+            helpers.average(bpmData) <= constants.BRACELET_BPM_NO_SIGNAL_MAX_AMPLITUDE
+        ):
+            status["bpm"] = 0
+        elif (self.__is_heart_rate_valid(bpmData)):
+            status["bpm"] = 3
+        else:
+            status["bpm"] = 1
 
         self.logger.info(
             "Status calculated on {} samples.".format(len(currentData))
@@ -188,15 +196,15 @@ class Bracelet(InputDeviceInterface):
 
         self.logger.info("MongoDB server connection established.")
 
-    def __set_signal_quality_std_ranges(self):
+    def __set_signal_quality_variance_range(self):
         # Good sinal
-        deviation_standard_info = helpers.get_std_range(
+        variance_info = helpers.get_variance_range(
             constants.BRACELET_MIN_BUFFER_SIZE,
             1000,
             constants.BRACELET_GOOD_SIGNAL_MAX_AMPLITUDE
         )
-        constants.BRACELET_GOOD_SIGNAL_MIN_STD = deviation_standard_info[0]
-        constants.BRACELET_GOOD_SIGNAL_MAX_STD = deviation_standard_info[1]
+        constants.BRACELET_GOOD_SIGNAL_MIN_VAR = variance_info[0]
+        constants.BRACELET_GOOD_SIGNAL_MAX_VAR = variance_info[1]
 
     def __is_no_signal(self, samples):
         min_value = constants.BRACELET_CENTER - (
@@ -213,11 +221,11 @@ class Bracelet(InputDeviceInterface):
         return False
 
     def __is_good_signal(self, samples):
-        data_std = helpers.standard_deviation(samples)
+        data_variance = helpers.variance(samples)
 
         if (
-            (data_std >= constants.BRACELET_GOOD_SIGNAL_MIN_STD) and
-            (data_std <= constants.BRACELET_GOOD_SIGNAL_MAX_STD)
+            (data_variance >= constants.BRACELET_GOOD_SIGNAL_MIN_VAR) and
+            (data_variance <= constants.BRACELET_GOOD_SIGNAL_MAX_VAR)
         ):
             return True
 

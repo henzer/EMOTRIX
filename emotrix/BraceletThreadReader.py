@@ -4,6 +4,7 @@ import threading
 import logging
 import json
 import time
+import constants
 
 
 class BraceletThreadReader(threading.Thread):
@@ -71,6 +72,12 @@ class BraceletThreadReader(threading.Thread):
 
                 continue
 
+            # Validate data
+            if (not self.__isAValidSample(dataJson)):
+                ignored_count += 1
+
+                continue
+
             # Validate checksum
             checksum = dataJson.pop("chksum")
             if (not self.__assertChecksum(dataJson, checksum)):
@@ -121,3 +128,34 @@ class BraceletThreadReader(threading.Thread):
             return True
 
         return False
+
+    def __isAValidSample(self, data):
+        # {"bpm":N1,"emg":N2,"chksum":SUMA(N1, N2)}
+        keys = ["bpm", "emg", "chksum"]
+        for key in keys:
+            if (key not in data):
+                self.logger.warning(
+                    "Incomplet data received. Missing key '{}'.".format(key)
+                )
+
+                return False
+
+        if ((data["bpm"] < 0) and (data["bpm"] > constants.BRACELET_BPM_MAX_VALUE)):
+            self.logger.warning(
+                "Invalid value for bpm received. Value out of range: '{}'.".format(
+                    data["bpm"]
+                )
+            )
+
+            return False
+
+        if ((data["emg"] < 0) and (data["emg"] > constants.BRACELET_EMG_MAX_VALUE)):
+            self.logger.warning(
+                "Invalid value for emg received. Value out of range: '{}'.".format(
+                    data["emg"]
+                )
+            )
+
+            return False
+
+        return True
