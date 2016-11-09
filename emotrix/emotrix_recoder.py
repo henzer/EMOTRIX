@@ -14,16 +14,18 @@ import gevent
 
 class EmotrixRecoder(object):
 
+    #El metodo init define algunos parametros por defecto, para almacenar las lecturas del EMOTIV
     def __init__(self):
         self.sequence = ['happy', 'neutral', 'sad', 'happy', 'neutral', 'sad', 'happy', 'neutral', 'sad', 'happy', 'neutral', 'sad','happy', 'neutral', 'sad','happy', 'neutral', 'sad','happy', 'neutral', 'sad']
         self.time_block = 7
         self.num_blocks = len(self.sequence)
         self.filename = 'data.csv'
 
+    #Metodo para iniciar la grabacion de las lecturas de las señales EEG.
     def start(self, sequence=None, time_block=7, filename='data.csv'):
         self.time_block = time_block
         self.filename = filename
-
+        #Se define el objeto EMOTIV, utilizando la libreria EMOKIT
         headset = Emotiv()
         gevent.spawn(headset.setup)
         gevent.sleep(0)
@@ -38,10 +40,13 @@ class EmotrixRecoder(object):
         temp_t = 0
         tag = self.sequence[0]
 
+        #Se define el escritor de las lecturas en el archivo CSV
         writer = csv.writer(open(self.filename, 'w'), delimiter='\t', quotechar='"')
         try:
+            t0 = time.time()
             while True:
-                t = int(time.time())
+                t = int(time.time()-t0)
+                #t = int(time.time())
                 if temp_t != t:
                     cont_seconds += 1
 
@@ -76,6 +81,17 @@ class EmotrixRecoder(object):
         i += 1
 
 
-
+#Se inicia el proceso de la grabacion, se define la secuencia y el tiempo de cada estimulo.
 er = EmotrixRecoder()
-er.start(['happy', 'neutral', 'sad', 'happy', 'neutral', 'sad'], 5, 'henzer.csv')
+er.start(['NOPE','RELAX', 'RELAX', 'RELAX', 'RELAX',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          'HAPPY', 'NEUTRAL', 'SAD', 'NEUTRAL',
+          ], 4, 'user21.csv')
