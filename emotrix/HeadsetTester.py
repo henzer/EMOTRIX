@@ -1,23 +1,25 @@
+# -*- coding: utf-8 -*-
+
 from Headset import Headset
 import logging
 import time
-import sys
 
 puerto = 'COM3'
-casco = Headset(logging.INFO)
-print "Conectando a puerto {}.".format(puerto)
-try:
-    casco.connect(puerto, 115200)
-except Exception, e:
-    print e
-    sys.exit(0)
+headset = Headset(logging.INFO)
 
-print "Is conected? " + str(casco.isConnected())
-print "----------------"
-casco.startReading(persist_data=False)
+try:
+    headset.connect(puerto, 115200)
+except Exception, e:
+    raise e
+
+print "Is conected? " + str(headset.isConnected())
+print "-----------------------------------------"
+headset.startReading(persist_data=True)
 time.sleep(5)
-casco.stopReading()
-casco.closePort()
-print "----------------"
-print "Is conected? " + str(casco.isConnected())
-print casco.getStatus()
+headset.stopReading()
+headset.closePort()
+print "-----------------------------------------"
+print "Is conected? " + str(headset.isConnected())
+print headset.getStatus()
+
+

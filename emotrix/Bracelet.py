@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Object representation for Bracelet device.
 """

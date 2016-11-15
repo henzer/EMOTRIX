@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
 
+
 class InputDeviceInterface:
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def connect(self, port, boundrate):
+    def connect(self, port, baudrate):
         pass
 
     @abstractmethod
@@ -20,7 +21,7 @@ class InputDeviceInterface:
         pass
 
     @abstractmethod
-    def startReading(self):
+    def startReading(self, persist_data=False):
         pass
 
     @abstractmethod

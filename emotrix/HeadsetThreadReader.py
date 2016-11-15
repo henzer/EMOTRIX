@@ -19,7 +19,7 @@ class HeadsetThreadReader(threading.Thread):
     def __init__(self, input_handler, input_buffer, db, persist_data):
         threading.Thread.__init__(self)
 
-        self.setName("Helmet data reader")
+        self.setName("Headset data reader")
         self.input_handler = input_handler
         self.input_buffer = input_buffer
         self.persist_data = persist_data
@@ -120,7 +120,7 @@ class HeadsetThreadReader(threading.Thread):
 
             # Persisting data on DB
             try:
-                self.db.helmet_data.insert_one(dataJson)
+                self.db.headset_data.insert_one(dataJson)
             except Exception, e:
                 raise Exception(
                     "Persisting data raise an exception.\n" + str(e)

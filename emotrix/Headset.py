@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Object representation for Headset device.
 """
@@ -114,6 +115,11 @@ class Headset(InputDeviceInterface):
         Stops current reading process.
         Warning: this method doesn't close the port.
         """
+        if (not self.is_reading):
+            self.logger.info('Headset is not reading.')
+
+            return
+
         self.device_reader.stopReading()
         self.device_reader.join()
         self.is_reading = False
