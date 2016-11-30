@@ -13,17 +13,21 @@ class InputDeviceInterface:
         pass
 
     @abstractmethod
-    def getStatus(self):
-        pass
-
-    @abstractmethod
-    def closePort(self):
-        pass
-
-    @abstractmethod
     def startReading(self, persist_data=False):
         pass
 
     @abstractmethod
     def stopReading(self):
+        pass
+
+    @abstractmethod
+    def getStatus(self):
+        pass
+
+    @abstractmethod
+    def getCurrentData(self):
+        pass
+
+    @abstractmethod
+    def closePort(self):
         pass

@@ -64,27 +64,6 @@ class Bracelet(InputDeviceInterface):
         """
         return self.device_handler.isOpen()
 
-    def closePort(self):
-        """
-        Close current connection. If device isn't connected or program
-        is still reading, it does nothing.
-        """
-        # Si no esta conectado, no puede cerrar.
-        if (not self.isConnected()):
-            self.logger.info("Device is not conected.")
-            return False
-
-        # Si todavia esta leyendo, no puede cerrar.
-        if (self.is_reading):
-            self.logger.info("Can't close port because is still reading.")
-            return False
-
-        self.logger.info("Closing port " + str(self.port) + "...")
-        self.device_handler.close()
-        self.logger.info("Port " + str(self.port) + " closed successfully.")
-
-        return True
-
     def startReading(self, persist_data=False):
         """
         Starts the serial port reading. If device isn't connected, throws
@@ -181,6 +160,33 @@ class Bracelet(InputDeviceInterface):
         )
 
         return status
+
+    def getCurrentData(self):
+        """
+        Retrieve data acquired in the last second.
+        """
+        return self.device_buffer.getAll()
+
+    def closePort(self):
+        """
+        Close current connection. If device isn't connected or program
+        is still reading, it does nothing.
+        """
+        # Si no esta conectado, no puede cerrar.
+        if (not self.isConnected()):
+            self.logger.info("Device is not conected.")
+            return False
+
+        # Si todavia esta leyendo, no puede cerrar.
+        if (self.is_reading):
+            self.logger.info("Can't close port because is still reading.")
+            return False
+
+        self.logger.info("Closing port " + str(self.port) + "...")
+        self.device_handler.close()
+        self.logger.info("Port " + str(self.port) + " closed successfully.")
+
+        return True
 
     def __start_database(self):
         self.logger.info("Starting mongo client...")

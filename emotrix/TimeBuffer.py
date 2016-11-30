@@ -14,6 +14,9 @@ class TimeBuffer:
         self.seconds_back = seconds_back
 
     def insert(self, value):
+        """
+        Insert an element into buffer.
+        """
         current_timestamp = time.time()
         self.timestamps.append(current_timestamp)
         self.dataBuffer.append(value)
@@ -22,12 +25,21 @@ class TimeBuffer:
             self.timestamps.pop(0)
 
     def getAll(self):
+        """
+        Retrieve all data from buffer.
+        """
         return self.dataBuffer
 
     def getLast(self):
+        """
+        Retrieve last element from buffer.
+        """
         return self.dataBuffer[len(self.dataBuffer) - 1]
 
-    def dataBetAndEmptyBuffer(self):
+    def getAllAndClearBuffer(self):
+        """
+        Retrieve all data and clear buffer.
+        """
         data = self.dataBuffer
 
         self.dataBuffer = []
