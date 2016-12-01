@@ -7,20 +7,33 @@ from HeadsetEmotiv import HeadsetEmotiv
 from emotrix import Emotrix
 from BlockData import BlockData
 from TimeBuffer import TimeBuffer
+from Bracelet import Bracelet
+import logging
+import time
+
 import Tkinter
 
 class Main(object):
     def __init__(self):
         #Creacion del objeto HeadsetEmotiv
         time = 5
+        #
+        # self.buffer_emotion = TimeBuffer(time)
+        # self.e = Emotrix()
+        # self.e.training2()
 
-        self.buffer_emotion = TimeBuffer(time)
-        self.e = Emotrix()
-        self.e.training2()
+        # print "Iniciando la lectura desde Emotiv"
+        # self.he = HeadsetEmotiv(time)
+        # self.he.start()
 
-        print "Iniciando la lectura desde Emotiv"
-        self.he = HeadsetEmotiv(time)
-        self.he.start()
+        print "Iniciando Matias"
+        puerto = 'COM3'
+        self.bracelet = Bracelet(logging.INFO)
+        try:
+            self.bracelet.connect(puerto, 115200)
+        except Exception, e:
+            raise e
+        self.bracelet.startReading(persist_data=False)
 
         self.root = Tkinter.Tk()
         self.root.title('EMOTRIX')
@@ -49,7 +62,7 @@ class Main(object):
     def show_pulsera(self):
         self.fig = plt.figure()
         self.ax1 = self.fig.add_subplot(1, 1, 1)
-        ani = animation.FuncAnimation(self.fig, self.animate, interval=10)
+        ani = animation.FuncAnimation(self.fig, self.animate_pulsera, interval=10)
         plt.show()
 
     def show_emotion(self):
@@ -83,13 +96,21 @@ class Main(object):
 
         self.ax1.clear()
         self.ax1.set_title("Electrodos F3, F4, AF3, AF4");
-        self.ax1.set_xlabel('Tiempo');
-        self.ax1.set_ylabel('Amplitud');
+        self.ax1.set_xlabel('Tiempo')
+        self.ax1.set_ylabel('Amplitud')
+
         self.ax1.plot(self.he.f3.getAll(), "r")
         self.ax1.plot(self.he.f4.getAll(), "b")
         self.ax1.plot(self.he.af3.getAll(), "y")
         self.ax1.plot(self.he.af4.getAll(), "k")
 
+    def animate_pulsera(self, i):
+        self.ax1.clear()
+        self.ax1.set_title("Brazalete");
+        self.ax1.set_xlabel('Tiempo');
+        self.ax1.set_ylabel('Amplitud');
+        self.ax1.set_ylim([300, 800]);
+        self.ax1.plot(self.bracelet.device_buffer.getAll(), "r")
 
     def stop(self):
         plt.close()

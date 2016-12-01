@@ -80,13 +80,13 @@ class BraceletThreadReader(threading.Thread):
 
             # Validate checksum
             checksum = dataJson.pop("chksum")
-            if (not self.__assertChecksum(dataJson, checksum)):
-                self.logger(
-                    "Invalid data. Checksum doesn't match: " + str(dataJson)
-                )
-                ignored_count += 1
-
-                continue
+            # if (not self.__assertChecksum(dataJson, checksum)):
+            #     self.logger(
+            #         "Invalid data. Checksum doesn't match: " + str(dataJson)
+            #     )
+            #     ignored_count += 1
+            #
+            #     continue
 
             # Assume that all were taken at the same time.
             timestamp = str(time.time())
@@ -95,7 +95,7 @@ class BraceletThreadReader(threading.Thread):
             dataJson["readed_at"] = timestamp
 
             # Sent data to buffer
-            self.input_buffer.insert(dataJson)
+            self.input_buffer.insert(dataJson['emg'])
 
             if (not self.persist_data):
                 continue

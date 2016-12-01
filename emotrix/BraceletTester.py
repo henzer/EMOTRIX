@@ -14,7 +14,7 @@ except Exception, e:
 
 print "Is conected? " + str(bracelet.isConnected())
 print "-----------------------------------------"
-bracelet.startReading(persist_data=True)
+bracelet.startReading(persist_data=False)
 time.sleep(5)
 bracelet.stopReading()
 bracelet.closePort()
