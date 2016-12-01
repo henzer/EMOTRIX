@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # **********************************************************************************************************************
 # Archivo:      emotrix_recorder.py
 # Proposito:    Este archivo es el encargado de leer la data directamente desde el EMOTIV, y guardarla en un archivo csv
