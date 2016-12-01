@@ -21,5 +21,3 @@ headset.closePort()
 print "-----------------------------------------"
 print "Is conected? " + str(headset.isConnected())
 print headset.getStatus()
-
-
