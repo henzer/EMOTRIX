@@ -143,18 +143,18 @@ class Emotrix():
         #Se realizar CROSS VALIDATION utilizando una variación de parametros.
         for c in np.arange(0.001, 1, 0.5):
             print "################   C=" + str(c) + "   #########################"
-            clf = svm.SVC(kernel='linear', C=c)
-            scores = cross_val_score(clf, X, y, cv=5, verbose=1)
+            self.clf = svm.SVC(kernel='linear', C=c)
+            scores = cross_val_score(self.clf, X, y, cv=5, verbose=1)
             print ("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
         for c in np.arange(1, 100, 10):
             print "################   C=" + str(c) + "   #########################"
-            clf = svm.SVC(kernel='linear', C=c)
-            scores = cross_val_score(clf, X, y, cv=5, verbose=1)
+            self.clf = svm.SVC(kernel='linear', C=c)
+            scores = cross_val_score(self.clf, X, y, cv=5, verbose=1)
             print ("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
         for c in np.arange(200, 2000, 200):
             print "################   C=" + str(c) + "   #########################"
-            clf = svm.SVC(kernel='linear', C=c)
-            scores = cross_val_score(clf, X, y, cv=5, verbose=1)
+            self.clf = svm.SVC(kernel='linear', C=c)
+            scores = cross_val_score(self.clf, X, y, cv=5, verbose=1)
             print ("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
 
     #Funcion definida para la extraccion de caracteristicas de las señales EEG.
