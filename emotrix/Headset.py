@@ -38,9 +38,6 @@ class Headset(InputDeviceInterface):
         # Set bounds for good signal deviation standard.
         self.__set_signal_quality_variance_range()
 
-        # Can raise an pymongo.errors.ServerSelectionTimeoutError
-        self.__start_database()
-
     def connect(self, port, baudrate):
         """
         Attempts to establish a connection to the port received, with
@@ -73,11 +70,12 @@ class Headset(InputDeviceInterface):
         if (not self.isConnected()):
             raise Exception("Device is not conected.")
 
-        if (persist_data and not self.db):
-            raise Exception("Mongo db not initialized.")
-
         if (not self.device_buffer):
             raise Exception("Buffer not initialized.")
+
+        if (persist_data):
+            # Can raise an pymongo.errors.ServerSelectionTimeoutError
+            self.__start_database()
 
         self.device_reader = HeadsetThreadReader(
             self.device_handler,
