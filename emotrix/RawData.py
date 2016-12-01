@@ -57,7 +57,7 @@ class RawData(object):
                 af4_value = int(row[4].split(':')[1].split(',')[1])
                 af4_quality = int(row[4].split(':')[1].split(',')[0])
                 #Filtro
-                if min(f3_quality, f4_quality, af3_quality, af4_quality) >= 8:
+                if min(f3_quality, f4_quality, af3_quality, af4_quality) >= 10:
                     time.append(int(row[0]))
                     f3.append(f3_value)
                     f4.append(f4_value)

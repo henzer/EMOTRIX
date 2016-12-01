@@ -110,6 +110,39 @@ class Emotrix():
             plt.savefig('../../imagenes/F'+str(i+1)+'ANEXOS_'+user+'.png')
         plt.show()
 
+    # Funcion definida para el entrenamiento del algoritmo
+    def training2(self, file_data="user"):
+        # Se leen los archivos con toda la data.
+        raw = RawData(file_data, several_files=True)
+        # Se obtiene la data, devidida por segmentos.
+        blocks = raw.get_blocks_data()
+        shuffle(blocks)
+        c = [0, 0, 0]
+        for block in blocks:
+            if block.tag == 'HAPPY':
+                c[0] += 1
+            if block.tag == 'SAD':
+                c[1] += 1
+            if block.tag == 'NEUTRAL':
+                c[2] += 1
+        # Se imprime el numero de muestras
+        print '################ NUMERO DE MUESTRAS ###############'
+        print str(c[0]) + ' HAPPY'
+        print str(c[1]) + ' SAD'
+        print str(c[2]) + ' NEUTRAL'
+
+        # Se aplica una sanitizacion de los datos, antes de implementar SVM
+        result = self.feature_extraction(blocks)
+        X = result['features']
+        y = result['tags']
+
+        self.clf = svm.SVC(kernel='linear', C=0.001)
+        scores = cross_val_score(self.clf, X, y, cv=5, verbose=1)
+        print ("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+        self.clf.fit(X, y)
+        print "El algoritmo esta listo para usuarse"
+
+
     #Funcion definida para realizar pruebas, durante el entrenamiento.
     def getAccuracy(self, file_data="user"):
         #Se leen los archivos con toda la data.
@@ -135,10 +168,6 @@ class Emotrix():
         result = self.feature_extraction(blocks)
         X = result['features']
         y = result['tags']
-        scaler = preprocessing.StandardScaler().fit(X)
-        normalize = preprocessing.Normalizer().fit(X)
-        X = scaler.transform(X)
-        X = normalize.transform(X)
 
         #Se realizar CROSS VALIDATION utilizando una variación de parametros.
         for c in np.arange(0.001, 1, 0.5):
@@ -156,6 +185,8 @@ class Emotrix():
             self.clf = svm.SVC(kernel='linear', C=c)
             scores = cross_val_score(self.clf, X, y, cv=5, verbose=1)
             print ("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+
+
 
     #Funcion definida para la extraccion de caracteristicas de las señales EEG.
     def feature_extraction(self, blocks):
@@ -230,8 +261,14 @@ class Emotrix():
     def get_electrodes(self):
         pass
 
+    def detect_emotion(self, block):
+        features = self.feature_extraction([block])
+        print features
+        return self.clf.predict(features['features'])
 
-e = Emotrix()
+
+
+#e = Emotrix()
 #e.pruebas(file_data='user')
-e.training(file_data='user20.csv', user="user20")
+#e.training(file_data='user20.csv')
 #e.graph()
