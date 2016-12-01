@@ -21,5 +21,3 @@ bracelet.closePort()
 print "-----------------------------------------"
 print "Is conected? " + str(bracelet.isConnected())
 print bracelet.getStatus()
-
-

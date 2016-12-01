@@ -36,6 +36,9 @@ class TimeBuffer:
         """
         return self.dataBuffer[len(self.dataBuffer) - 1]
 
+    def getLength(self):
+        return len(self.dataBuffer)
+
     def getAllAndClearBuffer(self):
         """
         Retrieve all data and clear buffer.
