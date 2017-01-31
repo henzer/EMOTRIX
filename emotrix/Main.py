@@ -17,23 +17,16 @@ class Main(object):
     def __init__(self):
         #Creacion del objeto HeadsetEmotiv
         time = 5
-        #
-        # self.buffer_emotion = TimeBuffer(time)
-        # self.e = Emotrix()
-        # self.e.training2()
 
-        # print "Iniciando la lectura desde Emotiv"
-        # self.he = HeadsetEmotiv(time)
-        # self.he.start()
+        self.buffer_emotion = TimeBuffer(time)
+        self.e = Emotrix()
+        self.e.training2()
 
-        print "Iniciando Matias"
-        puerto = 'COM3'
-        self.bracelet = Bracelet(logging.INFO)
-        try:
-            self.bracelet.connect(puerto, 115200)
-        except Exception, e:
-            raise e
-        self.bracelet.startReading(persist_data=False)
+        print "Iniciando la lectura desde Emotiv"
+        self.he = HeadsetEmotiv(time)
+        self.he.start()
+
+
 
         self.root = Tkinter.Tk()
         self.root.title('EMOTRIX')
@@ -60,6 +53,14 @@ class Main(object):
         plt.show()
 
     def show_pulsera(self):
+        print "Iniciando Matias"
+        puerto = 'COM3'
+        self.bracelet = Bracelet(logging.INFO)
+        try:
+            self.bracelet.connect(puerto, 115200)
+        except Exception, e:
+            raise e
+        self.bracelet.startReading(persist_data=False)
         self.fig = plt.figure()
         self.ax1 = self.fig.add_subplot(1, 1, 1)
         ani = animation.FuncAnimation(self.fig, self.animate_pulsera, interval=10)
@@ -76,9 +77,9 @@ class Main(object):
         result = self.e.detect_emotion(b)
         print result
         if result[0]=='HAPPY':
-            self.buffer_emotion.insert(50)
-        elif result[0]=='SAD':
             self.buffer_emotion.insert(-50)
+        elif result[0]=='SAD':
+            self.buffer_emotion.insert(50)
         else:
             self.buffer_emotion.insert(0)
 
